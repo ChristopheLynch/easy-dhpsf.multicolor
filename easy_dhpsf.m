@@ -92,6 +92,7 @@ s.nmPerPixel = 125.78; % 8A% 160; %8B
 % channel identifier
 s.channel = '0';
 % [minWidth maxWidth] of the two spots of the DHPSF, units of pixels
+% relative to the original value of 160 nm / pix
 % ***This has been set to a constant value based upon Moerner lab DH
 % microscopes; different implementations may vary***
 s.sigmaBounds = [1.0 1.5];
@@ -105,8 +106,8 @@ s.gaussianFilterSigma = 1.5*160/s.nmPerPixel;
 % minimum lateral distance between identified SMs, units of pixels
 s.minDistBetweenSMs = 7.5*160/s.nmPerPixel;
 %
-r = s;
-g = s;
+channelChoices = ['0';'r';'g'];
+global r g
 %% GUI parameters
 figSize = [440 610];
 figMargin = 20;
@@ -161,14 +162,14 @@ htextFitStatus = uicontrol('Parent',hpanelFit,'Style','text',...
     'Position',[figSize(1)-120,panelMargin+5,70,15]);
 % setup controls
 % channel selection - see also the popupSetupChannel_Callback function
-% htextSetupChannel = uicontrol('Parent',hpanelSetup,'Style','text',...
-%     'String','Channel:',...
-%     'Position',[panelMargin,panelMargin,60,30],...
-%     'HorizontalAlignment','left');
-% hpopupSetupChannel = uicontrol('Parent',hpanelSetup,'Style','popupmenu',...
-%     'Enable','off','Position',[panelMargin+60,panelMargin,40,30],...
-%     'String','0|R|G',...
-%     'Callback',{@popupSetupChannel_Callback});
+htextSetupChannel = uicontrol('Parent',hpanelSetup,'Style','text',...
+    'String','Channel:',...
+    'Position',[panelMargin,panelMargin,60,30],...
+    'HorizontalAlignment','left');
+hpopupSetupChannel = uicontrol('Parent',hpanelSetup,'Style','popupmenu',...
+    'Position',[panelMargin+60,panelMargin,40,30],...
+    'Callback',{@popupSetupChannel_Callback},...
+    'String','0|R|G','Enable','on'); % TODO: move this into update code so that the string is set as R|G once using multicolor
 htextSetupConv = uicontrol('Parent',hpanelSetup,'Style','text',...
     'String','Conversion gain:',...
     'Position',[panelMargin*2+100,panelMargin,70,30],...
@@ -264,7 +265,7 @@ set([hfig,htextProjStatus,...
     htextCalStatus,htextFidStatus,htextThreshStatus,htextFitStatus,...
     hbuttonCalRun,hbuttonFidRun,hbuttonThreshRun,hbuttonFitRun,hbuttonFitDebug...
     hbuttonOutExport,hbuttonOutScatter,hbuttonOutHist,...
-    htextSetupConv,heditSetupConv,... %     htextSetupChannel,hpopupSetupChannel,...
+    htextSetupConv,heditSetupConv, htextSetupChannel,hpopupSetupChannel,...
     htextSetupPixSize, heditSetupPixSize,htextCalSel,hpopupCalSel,...
     haxesCalImg,hcheckFidUse,...
     htextThreshFileSel,hpopupThreshFileSel,...
@@ -317,7 +318,9 @@ set(hfig,'Visible','on');
         s.channel = '0';
         s.smacmEMGain = 300;
         r = s;
+        r.channel = 'r';
         g = s;
+        g.channel = 'g';
         updateGUI;
     end
     function loadProj
@@ -355,7 +358,15 @@ set(hfig,'Visible','on');
         
         updateGUI;
     end
+
     function updateGUI
+        if s.channel == 'r'
+            r = s;
+        elseif s.channel == 'g'
+            g = s;
+        end
+                
+        set(hpopupSetupChannel,'Value',find(channelChoices==s.channel));
         set(heditSetupConv,'String',num2str(s.conversionGain));
         set(heditSetupPixSize,'String',num2str(s.nmPerPixel));
         if s.projStatus(1)
@@ -449,10 +460,38 @@ set(hfig,'Visible','on');
     end
 
     % setup controls
-%     function popupSetupChannel_Callback(source,~) 
-%         s.channel = get(source,'Value');
-%         updateGUI;
-%     end
+    function popupSetupChannel_Callback(source,~) 
+        % if selecting a color after doing some analysis in the '0' channel
+        % the user is given the option to move their analysis into their
+        % channel of choice\
+        % channelChoices = ['0';'r';'g']; (initialized at beginning)
+        goMulticolor = 'No: Overwrite';
+        if s.channel == '0' && any(s.projStatus)
+            goMulticolor = questdlg('You already have non-labeled data. Do you want to import this into your chosen color?', ...
+            'Switch to multicolor mode', ...
+            'Yes','No: Overwrite','Cancel','Yes');
+            if strcmp(goMulticolor,'Cancel')
+                return
+            end
+        end
+        s.channel = channelChoices(get(source,'Value'));
+        if s.channel == 'r'
+            if strcmp(goMulticolor,'Yes')
+                r = s;
+            else
+                % the typical choice, for when switching between channels
+                s = r;
+            end
+        elseif s.channel == 'g'
+            if strcmp(goMulticolor,'Yes')
+                g = s;
+            else
+                % the typical choice, for when switching between channels
+                s = g;
+            end
+        end
+        updateGUI;
+    end
     function editSetupConv_Callback(source,~)
         s.conversionGain = str2double(get(source,'String'));
         s.projStatus(5) = false;
@@ -473,7 +512,7 @@ set(hfig,'Visible','on');
     % calibration controls
     function buttonCalRun_Callback(~,~) 
         [s.calFilePrefix, s.numCalBeads] = ...
-            f_calDHPSF(s.conversionGain,s.nmPerPixel,s.boxRadius,'0',s.sigmaBounds,s.lobeDistBounds);
+            f_calDHPSF(s.conversionGain,s.nmPerPixel,s.boxRadius,s.channel,s.sigmaBounds,s.lobeDistBounds);
         s.projStatus(1) = true;
         s.projStatus(5) = false;
         temp=load([s.calFilePrefix 'bead ' num2str(s.calBeadIdx) ' templates.mat'],'template');

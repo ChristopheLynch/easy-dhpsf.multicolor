@@ -80,19 +80,16 @@ for stack = 1:length(dataFile)
     end
     
     %% create output log filenames
+    
+    % saves in labeled directory if a channel is selected
     if channel == '0'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\molecule fits  ' ...
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) ' molecule fits  ' ...
+        datestr(now,'yyyymmdd HHMM') '\'];
+    else
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\' channel(1) ' molecule fits  ' ...
             datestr(now,'yyyymmdd HHMM') '\'];
-        mkdir(outputFilePrefix{stack});
-    elseif channel == 'G'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\reflected\molecule fits  ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
-        mkdir(outputFilePrefix{stack});
-    elseif channel == 'R'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\transmitted\molecule fits ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
-        mkdir(outputFilePrefix{stack});
     end
+    mkdir(outputFilePrefix{stack});
     
     if stack == 1
         % Compute darkAvg counts
@@ -187,9 +184,9 @@ for stack = 1:length(dataFile)
         end
         if channel == '0'
             selectedFrames = frames;
-        elseif channel == 'G'
+        elseif channel == 'g'
             selectedFrames = find(sifLogData(:,2) == 1);
-        elseif channel == 'R'
+        elseif channel == 'r'
             selectedFrames = find(sifLogData(:,3) == 1);
         end
     else

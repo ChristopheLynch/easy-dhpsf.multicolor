@@ -157,7 +157,7 @@ if exist('tempAvgDevX','var')
     avgDevY = tempAvgDevY;
     avgDevZ = tempAvgDevZ;
     
-    [avgDevX_denoised,avgDevY_denoised,avgDevZ_denoised] = f_waveletFidTracks(avgDevX,avgDevY,avgDevZ,1);
+    [avgDevX_denoised,avgDevY_denoised,avgDevZ_denoised] = f_waveletFidTracks(avgDevX,avgDevY,avgDevZ,0);
     
     % apply fiduciary corrections
     if useDenoising == 1

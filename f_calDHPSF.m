@@ -97,6 +97,7 @@ numFrames = length(dataFileInfo);
 imgHeight = dataFileInfo.Height;
 imgWidth = dataFileInfo.Width;
 
+% saves in labeled directory if a channel is selected
 if channel == '0'
     outputFilePrefix = [dataFile(1:length(dataFile)-4) '\calibration ' ...
         datestr(now,'yyyymmdd HHMM') '\'];

@@ -72,15 +72,48 @@ if ischar(dataFile)
     dataFile = cellstr(dataFile);
 end
 
-for stack = 1:length(dataFile)
-
+    % allows user to limit the number of files in case there are many, many
+    % large files (i.e., very long acquisitions where the sample does not
+    % change very much)
+    if length(dataFile) > 1
+        dlg_title = 'Select Files';
+        prompt = {  'Choose files for thresholding' };
+        def = {num2str(1:length(dataFile))};
+        num_lines = 1;
+        inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+        if isempty(inputdialog)
+            error('User cancelled the program')
+        end
+        selectedFiles = str2num(inputdialog{1});
+    else
+        selectedFiles = 1:length(dataFile);
+    end
+    
+for stack = selectedFiles
+    
     fileInfo = imfinfo([dataPath dataFile{stack}]);
     numFrames = length(fileInfo);
-    frames = 1:numFrames;
+    
+    % lets user specify a smaller number of frames in case of
+    % large files with many SMs, since templates will be sampled quickly
+    if length(selectedFiles == 1)
+        dlg_title = 'Select Frames';
+        prompt = {  'Choose frames for thresholding' };
+        def = {[ '[1:' num2str(numFrames) ']' ]};
+        num_lines = 1;
+        inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+
+        if isempty(inputdialog)
+            error('User cancelled the program')
+        end
+        frames = str2num(inputdialog{1});
+    else
+        frames = 1:numFrames;
+    end
     imgHeight = fileInfo(1).Height;
     imgWidth = fileInfo(1).Width;
     
-    if stack == 1
+    if stack == selectedFiles(1)
         
 %         [templateFile, templatePath] = uigetfile({'*.tif;*.mat';'*.*'},'Open image stack or MATLAB *.mat file of a DH-PSF template');
 %         if isequal(templateFile,0)
@@ -152,21 +185,18 @@ for stack = 1:length(dataFile)
     end
     
     %% create output log filenames
+    % saves in labeled directory if a channel is selected
     if channel == '0'
         outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\threshold ' ...
             datestr(now,'yyyymmdd HHMM') '\'];
-        mkdir(outputFilePrefix{stack});
-    elseif channel == 'G'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\reflected\threshold ' ...
+    else
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\' channel(1) ' threshold ' ...
             datestr(now,'yyyymmdd HHMM') '\'];
-        mkdir(outputFilePrefix{stack});
-    elseif channel == 'R'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\transmitted\threshold ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
-        mkdir(outputFilePrefix{stack});
     end
     
-    if stack==1
+    mkdir(outputFilePrefix{stack});
+    
+    if stack== selectedFiles(1)
         %% Compute darkAvg counts
         
         if ~isequal(darkFile,0)
@@ -329,16 +359,16 @@ for stack = 1:length(dataFile)
         
         % Compute average image
         avgImg = zeros(imgHeight,imgWidth);
-        for a = 1:200
+        for a = 1:min(200,length(frames))
             avgImg = avgImg + double(imread([dataPath dataFile{stack}],frames(a),'Info',fileInfo)) - darkAvg;
         end
-        avgImg = avgImg/200;
+        avgImg = avgImg/min(200,length(frames));
         
         hROI = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         imagesc(avgImg);axis image;colormap hot;
-        if channel == 'G'
+        if channel == 'g'
             ROI = imrect(gca,[1 1 270 270]);
-        elseif channel == 'R'
+        elseif channel == 'r'
             ROI = imrect(gca,[243 243 270 270]);
         else
             ROI = imrect(gca,[1 1 size(avgImg,1) size(avgImg,2)]);
@@ -396,7 +426,7 @@ for stack = 1:length(dataFile)
         
     end
     
-    %% Identify frames to analyze
+    %% Identify frames to analyze when limiting by sif log
 
     if ~isequal(logPath,0)
         if length(logFile) == length(dataFile)
@@ -407,17 +437,13 @@ for stack = 1:length(dataFile)
             sifLogData = sifLogData(frameNum:frameNum+numFrames-1,:);
             frameNum = frameNum + numFrames;
         end
-        if channel == '0'
-            selectedFrames = frames;
-        elseif channel == 'G'
-            selectedFrames = find(sifLogData(:,2) == 1);
-        elseif channel == 'R'
-            selectedFrames = find(sifLogData(:,3) == 1);
+        if channel == 'g'   % use an intersect in case frames are limited by user
+            frames = intersect(find(sifLogData(:,2) == 1),frames);
+        elseif channel == 'r'
+            frames = intersect(find(sifLogData(:,3) == 1),frames);
         end
-    else
-        selectedFrames = frames;
+        
     end
-    
     %% do template matching
     
     hMatchFig = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
@@ -425,11 +451,12 @@ for stack = 1:length(dataFile)
     numPSFfits = 0;
     startTime = tic;
     
-    for a=length(frames):-1:1
+    for a=frames(end:-1:1);
         
-        if ~logical(sum(frames(a)==selectedFrames))
-            continue
-        end
+%         % skip if this is not part of the selected frames
+%         if ~any(frames(a)==selectedFrames)
+%             continue
+%         end
         
         data = double(imread([dataPath dataFile{stack}],frames(a),'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);

@@ -96,22 +96,16 @@ for stack = 1:length(dataFile)
 %         end
         
     end
+
+    % saves in labeled directory if a channel is selected
     if channel == '0'
         outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\fiduciaries ' ...
         datestr(now,'yyyymmdd HHMM') '\'];
-        mkdir(outputFilePrefix{stack});
-    
-    elseif channel == 'G'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\reflected\fiduciaries ' ...
+    else
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\' channel(1) ' fiduciaries ' ...
             datestr(now,'yyyymmdd HHMM') '\'];
-        mkdir(outputFilePrefix{stack});
-        
-    elseif channel == 'R'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\transmitted\fiduciaries ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
-        mkdir(outputFilePrefix{stack});
-    
     end
+    mkdir(outputFilePrefix{stack});
     %     outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\fiduciaries ' ...
 %         datestr(now,'yyyymmdd HHMM') '\'];
 %     mkdir(outputFilePrefix{stack});
@@ -154,9 +148,9 @@ for stack = 1:length(dataFile)
         
         hROI = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         imagesc(dataAvg);axis image;colormap hot;
-        if channel == 'G' || channel == '0'
+        if channel == 'g' || channel == '0'
             ROI = imrect(gca,[1 1 270 270]);
-        elseif channel == 'R'
+        elseif channel == 'r'
             ROI = imrect(gca,[243 243 270 270]);
         end
         
@@ -290,9 +284,9 @@ for stack = 1:length(dataFile)
     if ~isequal(logPath,0)
         sifLogData =  importdata([logPath logFile{stack}]);
         sifLogData = sifLogData(1:numFrames,:);
-        if channel == 'G'
+        if channel == 'g'
             selectedFrames = find(sifLogData(:,2) == 1);
-        elseif channel == 'R'
+        elseif channel == 'r'
             selectedFrames = find(sifLogData(:,3) == 1);
         end
     else

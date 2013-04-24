@@ -86,6 +86,8 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
             set(gcf, 'Position', get(0,'Screensize')); % Maximize figure
             legend('x raw track','x filtered track')
             title('Inspect overlay. Press any key to continue')
+            xlabel('Frame');
+            ylabel('Fiducial position');
             pause
 
             oopsx = 1;
@@ -144,6 +146,9 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
             set(gcf, 'Position', get(0,'Screensize')); % Maximize figure
             legend('y raw track','y filtered track')
             title('Inspect overlay. Press any key to continue')
+            xlabel('Frame');
+            ylabel('Fiducial position');
+            
             pause
 
             oopsy = 1;
@@ -201,6 +206,8 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
             set(gcf, 'Position', get(0,'Screensize')); % Maximize figure
             legend('z raw track','z filtered track')
             title('Inspect overlay. Press any key to continue')
+            xlabel('Frame');
+            ylabel('Fiducial position');
             pause
 
             oopsz = 1;
@@ -261,19 +268,25 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
         hold on
         plot(xfid_filt,'k')
         legend('x raw track','x filtered track')
-        title('x overlay')
+        title('overlay of x position of fiducial with filtered track');
+        xlabel('frame');
+        ylabel('x position (nm)');
         
         figure, plot(yfid,'r')
         hold on
         plot(yfid_filt,'k')
         legend('y raw track','y filtered track')
-        title('y overlay')
+        title('overlay of y position of fiducial with filtered track');
+        xlabel('frame');
+        ylabel('y position (nm)');
         
         figure, plot(zfid,'r')
         hold on
         plot(zfid_filt,'k')
         legend('z raw track','z filtered track')
-        title('z overlay')
+        title('overlay of z position of fiducial with filtered track');
+        xlabel('frame');
+        ylabel('z position (nm)');
         
     else
         error('FastVersion must be 1 or 0');
