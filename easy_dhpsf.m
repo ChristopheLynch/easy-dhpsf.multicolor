@@ -236,6 +236,9 @@ heditThreshVal = uicontrol('Parent',hpanelThresh,'Style','edit',...
     'HorizontalAlignment','left',...
     'Callback',{@editThreshVal_Callback});
 haxesThreshImg = axes('parent',hpanelThresh,'position',[panelMargin*2+buttonWidth+130,panelMargin,45,45]);
+hbuttonThreshClone = uicontrol('Parent',hpanelThresh,'Style','pushbutton',...
+    'String','Use for all','Position',[panelMargin,panelMargin,buttonWidth,25],...
+    'Callback',{@buttonThreshClone_Callback});
 % SM fitting controls
 hbuttonFitRun = uicontrol('Parent',hpanelFit,'Style','pushbutton',...
     'String','Run','Position',[panelMargin,panelMargin,buttonWidth,25],...
@@ -255,6 +258,10 @@ hbuttonOutHist = uicontrol('Parent',hpanelOut,'Style','pushbutton',...
     'String','2D histogram','Position',...
     [panelMargin*3+buttonWidth*2,panelMargin,buttonWidth,25],...
     'Callback',{@buttonOutHist_Callback});
+hbuttonOutReg = uicontrol('Parent',hpanelOut,'Style','pushbutton',...
+    'String','Old Style','Position',...
+    [panelMargin*4+buttonWidth*3,panelMargin,buttonWidth-20,25],...
+    'Callback',{@buttonOutReg_Callback});
 % align([hpanelCal,hpanelFid,hpanelThresh,hpanelFit,hpanelOut],'Center','None');
 newProj;
 
@@ -263,11 +270,11 @@ newProj;
 set([hfig,htextProjStatus,...
     hpanelSetup,hpanelCal,hpanelFid,hpanelThresh,hpanelFit,hpanelOut,...
     htextCalStatus,htextFidStatus,htextThreshStatus,htextFitStatus,...
-    hbuttonCalRun,hbuttonFidRun,hbuttonThreshRun,hbuttonFitRun,hbuttonFitDebug...
-    hbuttonOutExport,hbuttonOutScatter,hbuttonOutHist,...
-    htextSetupConv,heditSetupConv, htextSetupChannel,hpopupSetupChannel,...
-    htextSetupPixSize, heditSetupPixSize,htextCalSel,hpopupCalSel,...
-    haxesCalImg,hcheckFidUse,...
+    hbuttonCalRun,hbuttonFidRun,hbuttonThreshRun,hbuttonThreshClone,...
+    hbuttonFitRun,hbuttonFitDebug, hbuttonOutExport,hbuttonOutScatter,...
+    hbuttonOutHist,hbuttonOutReg,htextSetupConv,heditSetupConv, htextSetupChannel,...
+    hpopupSetupChannel,htextSetupPixSize, heditSetupPixSize,htextCalSel,...
+    hpopupCalSel,haxesCalImg,hcheckFidUse,...
     htextThreshFileSel,hpopupThreshFileSel,...
     htextThreshSel,hpopupThreshSel,htextThreshVal,heditThreshVal,haxesThreshImg...
     ],'Units','normalized');
@@ -354,7 +361,7 @@ set(hfig,'Visible','on');
         end
         projFile = [projPath projFile];
         s.projStatus(5) = true;
-        save(projFile,'s');
+        save(projFile,'s','r','g');
         
         updateGUI;
     end
@@ -386,16 +393,19 @@ set(hfig,'Visible','on');
             set(hpopupCalSel,'Enable','off','String','1','Value',s.calBeadIdx);
             cla(haxesCalImg);
         end
+        
         if s.projStatus(2)
             set(htextThreshStatus,'String','Complete','BackgroundColor','g');
             set(hbuttonFidRun,'Enable','on');
             set(hbuttonFitRun,'Enable','on');
             popupChoices = sprintf('%s|',s.smacmRawFile{:});
             set(hpopupThreshFileSel,'Enable','on',...
-                'String',popupChoices(1:length(popupChoices)-1));
+                'String',popupChoices(1:length(popupChoices)-1),...
+                'Value',s.threshFileSelIdx);
             popupChoices = num2str(1:length(s.templateIdxs),'%g|');
             set(hpopupThreshSel,'Enable','on',...
-                'String',popupChoices(1:length(popupChoices)-1));
+                'String',popupChoices(1:length(popupChoices)-1),...
+                'Value', s.templateSelIdx);
             set(heditThreshVal,'Enable','on','String',num2str(s.templateThreshs(...
                 s.threshFileSelIdx,s.templateSelIdx)));
             imagesc(squeeze(s.templateImgs(s.templateIdxs(s.templateSelIdx),:,:)),...
@@ -411,6 +421,13 @@ set(hfig,'Visible','on');
             set(heditThreshVal,'Enable','off','String','0.000','Value',0.000);
             cla(haxesThreshImg);
         end
+        
+        if  length(s.smacmRawFile)>1 && ~any(s.templateThreshs(s.threshFileSelIdx,:)==0)
+            set(hbuttonThreshClone,'Enable','on');
+        else
+            set(hbuttonThreshClone,'Enable','off');
+        end
+        
         if s.projStatus(3)
             set(htextFidStatus,'String','Complete','BackgroundColor','g');
             set(hcheckFidUse,'Enable','on','Value',s.useFids);
@@ -424,12 +441,14 @@ set(hfig,'Visible','on');
             set(hbuttonOutScatter,'Enable','on');
             set(hbuttonOutHist,'Enable','on');
             set(hbuttonFitDebug,'Enable','on');
+            set(hbuttonOutReg,'Enable','on');
         else
             set(htextFitStatus,'String','Incomplete','BackgroundColor','y');
             set(hbuttonOutExport,'Enable','off');
             set(hbuttonOutScatter,'Enable','off');
             set(hbuttonOutHist,'Enable','off');
             set(hbuttonFitDebug,'Enable','off');
+            set(hbuttonOutReg,'Enable','off');
         end
         if s.projStatus(5)
             set(htextProjStatus,'String',projFile,...
@@ -561,6 +580,13 @@ set(hfig,'Visible','on');
         s.projStatus(5) = false;
         updateGUI;
     end
+    function buttonThreshClone_Callback(~,~)
+        s.templateThreshs=repmat(s.templateThreshs(s.threshFileSelIdx,:),...
+                                        length(s.smacmRawFile),1);
+        disp({'The threshold settings for ' s.smacmRawFile{s.threshFileSelIdx}},...
+               {'are now being used for all files.'});
+        updateGUI;
+    end
 
     % fiducial controls: gives the location of the raw fid fit files as a cell array
     function buttonFidRun_Callback(~,~) 
@@ -643,6 +669,10 @@ set(hfig,'Visible','on');
         f_hist2(totalPSFfits,s.useFids);
         
         updateGUI;
+    end
+    function buttonOutReg_Callback(~,~)
+        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
+        save
     end
 
 

@@ -35,6 +35,8 @@ function [outputFilePrefix] = ...
 % precisely localized using a double gaussian fit and corrected for drift 
 % using the results from f_trackFiducials.
 
+% initialize parameters
+scrsz = get(0,'ScreenSize');
 conversionFactor = conversionGain/EMGain;
 
 ampRatioLimit = 0.5;
@@ -45,15 +47,79 @@ options = optimset('FunValCheck','on','Diagnostics','off','Jacobian','on', 'Disp
 %    'FinDiffType','central','DerivativeCheck','on');
 
 
-%% ask user for relevant datafiles
+%% preprocessing for files
 
 outputFilePrefix = cell(1,length(dataFile));
 
-for stack = 1:length(dataFile)
+% can comment the code below in if it is desirable to select specific files
+% see f_calSMidentification for how to do this
+
+% if length(dataFile) > 1
+%     dlg_title = 'Select Files';
+%     prompt = {  'Choose files for thresholding' };
+%     def = {num2str(1:length(dataFile))};
+%     num_lines = 1;
+%     inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+%     if isempty(inputdialog)
+%         error('User cancelled the program')
+%     end
+%     selectedFiles = str2num(inputdialog{1});
+% else
+%     selectedFiles = 1:length(dataFile);
+% end
+
+selectedFiles = 1:length(dataFile);
+
+% allows user to select subset of frames, at the beginning, for all files
+dlg_title = 'Select Frames (default: use all frames)';
+num_lines = 1;
+def = {};
+prompt = {};
+
+% populates 'fileInfo' and 'numFrames' for all files, and generates the
+% fields for the frame selection dlg
+for i = 1:length(selectedFiles)
+    fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
+    numFramesAll(i) = length(fileInfoAll{i});
+    def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
+    prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
+end
+    def{end+1} = 'Yes';
+    prompt{end+1} = 'Do you want to estimate the laser profile?';
     
-    fileInfo = imfinfo([dataPath dataFile{stack}]);
-    numFrames = length(fileInfo);
-    frames = 1:numFrames;
+    %         temp = inputdlg({'Input frames to process for finding DH-PSFs (ex. [100:199 205 380])',...
+%                          'Do you want to estimate the laser profile?'},...
+%                          'Select frames and whether to estimate irradiation',...
+%                          1,...
+%                          {['[1:' num2str(length(fileInfo)) ']'],...
+%                           'Yes'});        
+% 
+%         frames = str2num(temp{1}); %% TODO: This only is called for the first iteration of stack =1
+%        findLaserInt = temp{2}=='Yes';
+    
+    
+inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+
+for i = 1:length(selectedFiles)
+    framesAll{i} = str2num(inputdialog{i});
+end
+    findLaserInt = inputdialog{length(selectedFiles)+1} == 'Yes';
+
+%% begin fitting loop over files
+for stack = selectedFiles % = 1:length(dataFile)
+
+    fileIdx = find(selectedFiles == stack); 
+    
+    fileInfo = fileInfoAll{fileIdx};
+    frames = framesAll{fileIdx};
+    numFrames = numFramesAll(fileIdx);
+    
+    fileInfo = fileInfoAll{fileIdx};
+    %fileInfo = imfinfo([dataPath dataFile{stack}]);
+    numFrames = numFramesAll(fileIdx);
+    %numFrames = length(fileInfo);
+    frames = framesAll{fileIdx};
+    %frames = 1:numFrames;
     imgHeight = fileInfo(1).Height;
     imgWidth = fileInfo(1).Width;
     
@@ -69,14 +135,24 @@ for stack = 1:length(dataFile)
             load(templateFile);
             templateSize = size(template,2);
         end
-  
-        temp = inputdlg({'Input frames to process for finding DH-PSFs (ex. [100:199 205 380])'},...
-                         'Input fitting parameters',...
-                         1,...
-                         {['[1:' num2str(length(fileInfo)) ']']});        
-
-        frames = str2num(temp{1}); %% This only is called for the first iteration of stack =1
-
+%   
+%         temp = inputdlg({'Input frames to process for finding DH-PSFs (ex. [100:199 205 380])',...
+%                          'Do you want to estimate the laser profile?'},...
+%                          'Select frames and whether to estimate irradiation',...
+%                          1,...
+%                          {['[1:' num2str(length(fileInfo)) ']'],...
+%                           'Yes'});        
+% 
+%         frames = str2num(temp{1}); %% TODO: This only is called for the first iteration of stack =1
+%        findLaserInt = temp{2}=='Yes';
+        
+        if findLaserInt
+            temp = inputdlg({'What was the laser power at the objective? (in mW)'},...
+                 'Input laser power',...
+                 1,...
+                 {'0'});    
+            powerAtObjective = str2double(temp{1})/1000;
+        end
     end
     
     %% create output log filenames
@@ -137,7 +213,24 @@ for stack = 1:length(dataFile)
         end
         cropWidth = ROI(3);
         cropHeight = ROI(4);
-
+        
+        if findLaserInt == 1;
+            avgImg = zeros(imgHeight,imgWidth);
+            avgImgFrames = min(200,length(frames));
+            for a = 1:avgImgFrames
+                avgImg = avgImg + double(imread([dataPath dataFile{stack}],frames(a),'Info',fileInfo)) - darkAvg;
+            end
+            avgImg = avgImg/avgImgFrames;
+            
+            hFOVmaskFig=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
+            imagesc(avgImg(ROI(2):ROI(2)+ROI(4)-1, ...
+                ROI(1):ROI(1)+ROI(3)-1),[0 300]);
+            axis image;colorbar;colormap hot;
+            title('Trace out the field of view boundaries by clicking at vertices');
+            FOVmask = roipoly;
+            close(hFOVmaskFig);
+        end
+        
         %% prepare template for template matching
         
         % pad template to same size as input
@@ -195,7 +288,7 @@ for stack = 1:length(dataFile)
     
     %% do template matching
     
-    scrsz = get(0,'ScreenSize');
+
     hSMFits=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
     totalPSFfits = zeros(20000, 6+18+3);
     numPSFfits = 0;
@@ -206,14 +299,10 @@ for stack = 1:length(dataFile)
     bkgndImg = zeros(length(ROI(2):ROI(2)+ROI(4)-1),...
         length(ROI(1):ROI(1)+ROI(3)-1));
     numbkgndImg = 0;
-    
-    for a=1:numFrames
 
-        if ~logical(sum(frames(a)==selectedFrames))
-            continue
-        end
+    for c=frames
         
-        data = double(imread([dataPath dataFile{stack}],frames(a),'Info',fileInfo))-darkAvg;
+        data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
 
         % subtract the background and continue
@@ -301,7 +390,7 @@ for stack = 1:length(dataFile)
         end
         
         totalPSFfits(numPSFfits+1:numPSFfits+numPSFLocs,1:6) = ...
-            [frames(a)*ones(numPSFLocs,1) (1:numPSFLocs)' PSFLocs(1:numPSFLocs,:)];
+            [c*ones(numPSFLocs,1) (1:numPSFLocs)' PSFLocs(1:numPSFLocs,:)];
        
         %% do fitting to extract exact locations of DH-PSFs
         
@@ -511,7 +600,7 @@ for stack = 1:length(dataFile)
             %there is an error. -AC 6/22
         end
         hold off;
-        title({['Frame ' num2str(frames(a)) ': raw data - darkAvg counts'] ...
+        title({['Frame ' num2str(c) ': raw data - darkAvg counts'] ...
             ['ROI [xmin ymin width height] = ' mat2str(ROI)]});
         
         subplot('Position',[0.125+2*.85/3 0.025 .85/3 .95]);
@@ -539,14 +628,17 @@ for stack = 1:length(dataFile)
     %movie2avi(M,'output_v1.avi','fps',10,'Compression','FFDS');
     
     %% Measure the Gaussian Laser Intensity Distribution
-%     bkgndImg_avg = bkgndImg/numbkgndImg;
-    
-%     [laser_x_nm, laser_y_nm ,sigma_x_nm, sigma_y_nm, theta, peakIntensity, waist]...
-%         = EstimateGaussianLaserProfile...
-%         (bkgndImg_avg, FOWmask, nmPerPixel, powerAtObjective, ROI);
-    
-    
-    save([outputFilePrefix{stack} 'molecule fits.mat']);
+    if findLaserInt == 1;
+    % This takes the average bkgndImg found using f_waveletBackground
+    % and tries to extract a Gaussian laser profile from it, assuming the
+    % background intensity is uniformly proportional to laser intensity
+        bkgndImg_avg = bkgndImg/numbkgndImg;
+
+        [laser_x_nm, laser_y_nm ,sigma_x_nm, sigma_y_nm, theta, peakIntensity, waist]...
+            = f_findGaussianLaserProfile...
+            (bkgndImg_avg, FOVmask, nmPerPixel, powerAtObjective, ROI);
+        
+    end
     
     %% Translate angle into corrected x,y positions and z position
     

@@ -72,44 +72,68 @@ if ischar(dataFile)
     dataFile = cellstr(dataFile);
 end
 
-    % allows user to limit the number of files in case there are many, many
-    % large files (i.e., very long acquisitions where the sample does not
-    % change very much)
-    if length(dataFile) > 1
-        dlg_title = 'Select Files';
-        prompt = {  'Choose files for thresholding' };
-        def = {num2str(1:length(dataFile))};
-        num_lines = 1;
-        inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-        if isempty(inputdialog)
-            error('User cancelled the program')
-        end
-        selectedFiles = str2num(inputdialog{1});
-    else
-        selectedFiles = 1:length(dataFile);
+% allows user to limit the number of files in case there are many, many
+% large files (i.e., very long acquisitions where the sample does not
+% change very much)
+if length(dataFile) > 1
+    dlg_title = 'Select Files';
+    prompt = {  'Choose files for thresholding' };
+    def = {num2str(1:length(dataFile))};
+    num_lines = 1;
+    inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+    if isempty(inputdialog)
+        error('User cancelled the program')
     end
+    selectedFiles = str2num(inputdialog{1});
+else
+    selectedFiles = 1:length(dataFile);
+end
+
+% allows user to select subset of frames, at the beginning, for all files
+dlg_title = 'Select Frames (default: use all frames)';
+num_lines = 1;
+def = {};
+prompt = {};
+% populates 'fileInfo' and 'numFrames' for all files, and generates the
+% fields for the frame selection dlg
+for i = 1:length(selectedFiles)
+    fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
+    numFramesAll(i) = length(fileInfoAll{i});
+    def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
+    prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
+end
+        
+inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+
+for i = 1:length(selectedFiles)
+    framesAll{i} = str2num(inputdialog{i});
+end
     
 for stack = selectedFiles
     
-    fileInfo = imfinfo([dataPath dataFile{stack}]);
-    numFrames = length(fileInfo);
+    fileIdx = find(selectedFiles == stack);
+    fileInfo = fileInfoAll{fileIdx};
+    frames = framesAll{fileIdx};
+    numFrames = numFramesAll(fileIdx);
     
-    % lets user specify a smaller number of frames in case of
-    % large files with many SMs, since templates will be sampled quickly
-    if length(selectedFiles == 1)
-        dlg_title = 'Select Frames';
-        prompt = {  'Choose frames for thresholding' };
-        def = {[ '[1:' num2str(numFrames) ']' ]};
-        num_lines = 1;
-        inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-
-        if isempty(inputdialog)
-            error('User cancelled the program')
-        end
-        frames = str2num(inputdialog{1});
-    else
-        frames = 1:numFrames;
-    end
+%     % lets user specify a smaller number of frames in case of
+%     % large files with many SMs, since templates will be sampled quickly.
+%     % For simplicity, only activated when only when there is only one file
+%     % (makes batch processing work quickly without user input)
+%     if length(selectedFiles) == 1
+%         dlg_title = 'Select Frames';
+%         prompt = {  'Choose frames for thresholding' };
+%         def = {[ '[1:' num2str(numFrames) ']' ]};
+%         num_lines = 1;
+%         inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+% 
+%         if isempty(inputdialog)
+%             error('User cancelled the program')
+%         end
+%         frames = str2num(inputdialog{1});
+%     else
+%         frames = 1:numFrames;
+%     end
     imgHeight = fileInfo(1).Height;
     imgWidth = fileInfo(1).Width;
     
@@ -359,10 +383,11 @@ for stack = selectedFiles
         
         % Compute average image
         avgImg = zeros(imgHeight,imgWidth);
-        for a = 1:min(200,length(frames))
+        avgImgFrames = min(200,length(frames));
+        for a = 1:avgImgFrames
             avgImg = avgImg + double(imread([dataPath dataFile{stack}],frames(a),'Info',fileInfo)) - darkAvg;
         end
-        avgImg = avgImg/min(200,length(frames));
+        avgImg = avgImg/avgImgFrames;
         
         hROI = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         imagesc(avgImg);axis image;colormap hot;
@@ -377,7 +402,7 @@ for stack = selectedFiles
         % ROI = imrect(gca,[1 1 128 128]);
         title({'Shape box and double-click to choose region of interest for PSF extraction' ...
             ['[xmin ymin width height] = ' mat2str(ROI.getPosition)]...
-            'The displayed image is the average of the first 200 frames'});
+            ['The displayed image is the average of the first ' num2str(avgImgFrames) ' frames']});
         addNewPositionCallback(ROI,@(p) title({'Shape box and double-click to choose region of interest for PSF extraction' ...
             ['[xmin ymin width height] = ' mat2str(p,3)]...
             'The displayed image is the average of the first 200 frames'}));
@@ -450,18 +475,12 @@ for stack = selectedFiles
     totalPSFfits = zeros(10000, 6+15+3);
     numPSFfits = 0;
     startTime = tic;
-    
-    for a=frames(end:-1:1);
+    frameNum = 1;
+    for b = frames(end:-1:1);
         
-%         % skip if this is not part of the selected frames
-%         if ~any(frames(a)==selectedFrames)
-%             continue
-%         end
-        
-        data = double(imread([dataPath dataFile{stack}],frames(a),'Info',fileInfo))-darkAvg;
+        data = double(imread([dataPath dataFile{stack}],b,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
 
- 
         % subtract the background and continue
         [bkgndImg,~] = f_waveletBackground(data);
         data = data - bkgndImg;
@@ -529,7 +548,7 @@ for stack = selectedFiles
         end
         
         totalPSFfits(numPSFfits+1:numPSFfits+numPSFLocs,1:6) = ...
-            [frames(a)*ones(numPSFLocs,1) (1:numPSFLocs)' PSFLocs(1:numPSFLocs,:)];
+            [b*ones(numPSFLocs,1) (1:numPSFLocs)' PSFLocs(1:numPSFLocs,:)];
         
         %% output an example image for each threshold level
         %  so that user can pick appropriate threshold later
@@ -580,7 +599,7 @@ for stack = selectedFiles
                 'MarkerEdgeColor', templateColors(PSFLocs(b,3),:));
         end
         hold off;
-        title({['Frame ' num2str(frames(a)) ': raw data - darkAvg counts'] ...
+        title({['Frame ' num2str(b) ': raw data - darkAvg counts'] ...
             ['ROI [xmin ymin width height] = ' mat2str(ROI)]});
         
         drawnow;
