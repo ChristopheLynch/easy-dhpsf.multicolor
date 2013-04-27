@@ -251,13 +251,6 @@ for i=1:numSteps
 end
 
 
-%% Create output file directories
-
-outputFilePrefix = [dataFile(1:length(dataFile)-4) '\calibration ' ...
-    datestr(now,'yyyymmdd HHMM') '\'];
-mkdir(outputFilePrefix);
-
-
 %% Fit chosen beads throughout entire image stack
 h = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
 
