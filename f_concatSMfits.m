@@ -25,7 +25,7 @@
 % NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-function [totalPSFfits, numFramesInFiles] = ...
+function [totalPSFfits, numFrames] = ...
     f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix)
 %clear all;
 % close all;
@@ -137,7 +137,9 @@ if exist('tempAvgDevX','var')
 
     % load localization data
 %     moleFiles = {};
-    for c = 1:fileNum % -1
+
+        
+    for c = 1:fileNum
         % load data
         load([fitFilePrefix{c} 'molecule fits.mat'],'totalPSFfits','numFrames');
         
@@ -219,9 +221,13 @@ else
 %         [moleFile molePath] = uigetfile({'*.mat';'*.*'},...
 %             ['Open data file #' num2str(fileNum) ' with PSF localizations']);
     end
+    % call 'numFrames' to match the fiducial-corrected terminology
+    numFrames = numFramesInFiles;
+    % includes NaNs for fiducial-corrected position fields
     totalPSFfits = [tempPSFfits nan(size(tempPSFfits,1),3)];
 %     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
+    
     
     
     

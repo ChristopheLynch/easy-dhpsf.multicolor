@@ -259,8 +259,8 @@ hbuttonOutHist = uicontrol('Parent',hpanelOut,'Style','pushbutton',...
     [panelMargin*3+buttonWidth*2,panelMargin,buttonWidth,25],...
     'Callback',{@buttonOutHist_Callback});
 hbuttonOutReg = uicontrol('Parent',hpanelOut,'Style','pushbutton',...
-    'String','Old Style','Position',...
-    [panelMargin*4+buttonWidth*3,panelMargin,buttonWidth-20,25],...
+    'String','Filter Output','Position',...
+    [panelMargin*4+buttonWidth*3,panelMargin,buttonWidth-10,25],...
     'Callback',{@buttonOutReg_Callback});
 % align([hpanelCal,hpanelFid,hpanelThresh,hpanelFit,hpanelOut],'Center','None');
 newProj;
@@ -671,9 +671,20 @@ set(hfig,'Visible','on');
         updateGUI;
     end
     function buttonOutReg_Callback(~,~)
-        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
-        save
+        [totalPSFFits,numFrames] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
+%         [matFile, matPath] = uiputfile({'*.mat';'*.*'},'Save localizations as old-style .mat file');
+%         if isequal(matFile,0)
+%             return;
+%         end
+        %conversionFactor = s.conversionGain /s.smacmEMGain;
+        %save([matPath matFile], 'totalPSFfits','numFrames','ROI','conversionFactor');
+        
+        % these match the numbers in f_fitSMs
+%         ampRatioLimit = 0.5;
+%         sigmaRatioLimit = 0.4;
+        f_processFits(totalPSFFits,numFrames,s.fitFilePrefix);
+%         f_processFits(totalPSFfits,numFrames,ROI,conversionFactor,...
+%             s.sigmaBounds,s.lobeDistBounds,ampRatioLimit,sigmaRatioLimit,...
+%             s.nmPerPixel);
     end
-
-
 end
