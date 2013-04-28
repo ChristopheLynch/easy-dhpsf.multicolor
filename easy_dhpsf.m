@@ -583,8 +583,8 @@ set(hfig,'Visible','on');
     function buttonThreshClone_Callback(~,~)
         s.templateThreshs=repmat(s.templateThreshs(s.threshFileSelIdx,:),...
                                         length(s.smacmRawFile),1);
-        disp({'The threshold settings for ' s.smacmRawFile{s.threshFileSelIdx}},...
-               {'are now being used for all files.'});
+        disp(['The threshold settings for ' s.smacmRawFile{s.threshFileSelIdx},...
+               ' are now being used for all files.']);
         updateGUI;
     end
 

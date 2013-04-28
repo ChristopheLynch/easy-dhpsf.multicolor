@@ -78,14 +78,20 @@ prompt = {};
 
 % populates 'fileInfo' and 'numFrames' for all files, and generates the
 % fields for the frame selection dlg
+fileInfoAll=cell(length(selectedFiles),1);
+numFramesAll = zeros(length(selectedFiles),1);
+def = cell(length(selectedFiles)+1,1);
+prompt = cell(length(selectedFiles)+1,1);
+%tic
 for i = 1:length(selectedFiles)
     fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
     numFramesAll(i) = length(fileInfoAll{i});
     def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
     prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
 end
-    def{end+1} = 'Yes';
-    prompt{end+1} = 'Do you want to estimate the laser profile?';
+%toc
+    def{end} = 'Yes';
+    prompt{end} = 'Do you want to estimate the laser profile?';
     
     %         temp = inputdlg({'Input frames to process for finding DH-PSFs (ex. [100:199 205 380])',...
 %                          'Do you want to estimate the laser profile?'},...
@@ -103,7 +109,7 @@ inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 for i = 1:length(selectedFiles)
     framesAll{i} = str2num(inputdialog{i});
 end
-    findLaserInt = inputdialog{length(selectedFiles)+1} == 'Yes';
+    findLaserInt = strcmp(inputdialog{end},'Yes');
 
 %% begin fitting loop over files
 for stack = selectedFiles % = 1:length(dataFile)

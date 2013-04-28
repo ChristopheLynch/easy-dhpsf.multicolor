@@ -476,9 +476,9 @@ for stack = selectedFiles
     numPSFfits = 0;
     startTime = tic;
     frameNum = 1;
-    for b = frames(end:-1:1);
+    for c = frames(end:-1:1);
         
-        data = double(imread([dataPath dataFile{stack}],b,'Info',fileInfo))-darkAvg;
+        data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
 
         % subtract the background and continue
@@ -599,7 +599,7 @@ for stack = selectedFiles
                 'MarkerEdgeColor', templateColors(PSFLocs(b,3),:));
         end
         hold off;
-        title({['Frame ' num2str(b) ': raw data - darkAvg counts'] ...
+        title({['Frame ' num2str(c) ': raw data - darkAvg counts'] ...
             ['ROI [xmin ymin width height] = ' mat2str(ROI)]});
         
         drawnow;
