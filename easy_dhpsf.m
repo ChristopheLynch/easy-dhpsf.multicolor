@@ -350,6 +350,8 @@ set(hfig,'Visible','on');
         projFile = [projPath projFile];
         temp = load(projFile); % load into structure due to restriction on static workspaces
         s = temp.s;
+        g = temp.g;
+        r = temp.r;
         clear temp
 
         updateGUI;
@@ -361,6 +363,8 @@ set(hfig,'Visible','on');
         end
         projFile = [projPath projFile];
         s.projStatus(5) = true;
+        g.projStatus(5) = true;
+        r.projStatus(5) = true;
         save(projFile,'s','r','g');
         
         updateGUI;
