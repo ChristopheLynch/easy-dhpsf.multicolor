@@ -102,7 +102,7 @@ end
 % 
 %         frames = str2num(temp{1}); %% TODO: This only is called for the first iteration of stack =1
 %        findLaserInt = temp{2}=='Yes';
-    
+
     
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 
@@ -110,6 +110,19 @@ for i = 1:length(selectedFiles)
     framesAll{i} = str2num(inputdialog{i});
 end
     findLaserInt = strcmp(inputdialog{end},'Yes');
+    
+    % This information should be passed from the earlier execution of
+    % this code in f_calSMidentification
+    [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
+        'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
+        'MultiSelect', 'on');
+    if isequal(logPath,0)
+        logFile = 'not specified';
+    end
+    if ischar(logFile)
+        logFile = cellstr(logFile);
+    end
+    
 
 %% begin fitting loop over files
 for stack = selectedFiles % = 1:length(dataFile)
@@ -281,15 +294,21 @@ for stack = selectedFiles % = 1:length(dataFile)
             sifLogData = sifLogData(frameNum:frameNum+numFrames-1,:);
             frameNum = frameNum + numFrames;
         end
-        if channel == '0'
-            selectedFrames = frames;
-        elseif channel == 'g'
-            selectedFrames = find(sifLogData(:,2) == 1);
+        
+        if channel == 'g'   % use an intersect in case frames are limited by user
+            frames = intersect(find(sifLogData(:,2) == 1),frames);
         elseif channel == 'r'
-            selectedFrames = find(sifLogData(:,3) == 1);
+            frames = intersect(find(sifLogData(:,3) == 1),frames);
         end
-    else
-        selectedFrames = frames;
+%         if channel == '0'
+%             selectedFrames = frames;
+%         elseif channel == 'g'
+%             selectedFrames = find(sifLogData(:,2) == 1);
+%         elseif channel == 'r'
+%             selectedFrames = find(sifLogData(:,3) == 1);
+%         end
+%     else
+%         selectedFrames = frames;
     end
     
     %% do template matching

@@ -189,17 +189,17 @@ for stack = selectedFiles
             {mat2str(templateFrames)}); ...     % {'[8:4:32]'});
         templateFrames = str2num(temp{1});
         
-        logPath = 0;
-        logFile = 0;
-%         [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
-%             'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
-%             'MultiSelect', 'on');
-%         if isequal(logPath,0)
-%             logFile = 'not specified';
-%         end
-%         if ischar(logFile)
-%             logFile = cellstr(logFile);
-%         end
+%         logPath = 0;
+%         logFile = 0;
+        [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
+            'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
+            'MultiSelect', 'on');
+        if isequal(logPath,0)
+            logFile = 'not specified';
+        end
+        if ischar(logFile)
+            logFile = cellstr(logFile);
+        end
 
         [darkFile, darkPath] = uigetfile({'*.tif';'*.*'},'Open image stack with dark counts (same parameters as SMACM data)');
 %         if isequal(darkFile,0)

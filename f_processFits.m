@@ -33,35 +33,40 @@
 function f_processFits(catPSFfits,numFrames,fitFilePrefix)
 useTimeColors = 0;
 numPhotonRange = [0 100000];
+xyPrecRange = [1 100];
+zPrecRange = [1 100];
 
 load([fitFilePrefix{1} 'molecule fits.mat']);
 
 % Parameters
 
-dlg_title = 'Please Input Parameters';
-prompt = {  'Use Fiducial correction?'};    %,...
-%     'Size of Points in reconstruction',...
-%     'White Light Shift X (in nm)',...
-%     'White Light Shift Y (in nm)',...
-%    'Laser Power at objective (in mW)'...
-%     };
-def = {    '1'};    %, ... 
-%     '30', ...
-%     '0', ...
-%     '0', ...
-%     'NaN' ...
-%     };
-num_lines = 1;
-inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-
-useFidCorrections = str2double(inputdialog{1});
+% dlg_title = 'Please Input Parameters';
+% prompt = {  'Use Fiducial correction?'};    %,...
+% %     'Size of Points in reconstruction',...
+% %     'White Light Shift X (in nm)',...
+% %     'White Light Shift Y (in nm)',...
+% %    'Laser Power at objective (in mW)'...
+% %     };
+% def = {    '1'};    %, ... 
+% %     '30', ...
+% %     '0', ...
+% %     '0', ...
+% %     'NaN' ...
+% %     };
+% num_lines = 1;
+% inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+% 
+% useFidCorrections = str2double(inputdialog{1});
 scatterSize = 30; %str2double(inputdialog{2});
 wlShiftX = 0; %str2double(inputdialog{3});
 wlShiftY = 0; %str2double(inputdialog{4});
 % powerAtObjective = str2double(inputdialog{5})/1000;
+    if isnan(catPSFfits(1,30))
+        warning(['No fiducial correction applied!']);
+    end
 
 %% define plotting parameters
-useFidCorrections = logical(useFidCorrections);
+% useFidCorrections = logical(useFidCorrections);
 
 % nmPerPixel = 125.78;    % was 160 for 8b back
 % scaleBarLength = 1000;  % nm
@@ -121,12 +126,12 @@ ROI_initial = ROI;
 pass = 1;
 anotherpass = true;
 
-if ~exist('numFrames', 'var')
-    numFrames = frames(length(frames));
-end
+% if ~exist('numFrames', 'var')
+%     numFrames = frames(length(frames));
+% end
 
 zRange = [-2000 2000];
-frameRange = [1 numFrames];
+frameRange = [1 sum(numFramesAll)];
 fitErrorRange = [0 3];
 
 while anotherpass == true
@@ -206,8 +211,8 @@ while anotherpass == true
       
     dlg_title = 'Please Input Parameters';
     prompt = {  ...
-        'Lobe sigma lower bound (in pixel)',...
-        'Lobe sigma upper bound (in pixel)',...
+%         'Lobe sigma lower bound (in pixel)',...
+%         'Lobe sigma upper bound (in pixel)',...
         'Lobe distance lower bound (in pixel)',...
         'Lobe distance upper bound (in pixel)',...
         'Amplitude ratio limit',...
@@ -216,10 +221,14 @@ while anotherpass == true
         'Photon weighted fit error upper bound',...
         'Number of photons lower bound',...
         'Number of photons upper bound',...
+        'xyPrec lower bound (nm)',...
+        'xyPrec upper bound (nm)',...
+        'zPrec lower bound (nm)',...
+        'zPrec upper bound (nm)',...
         };
     def = { ...
-        num2str(sigmaBounds(1)), ...
-        num2str(sigmaBounds(2)), ...
+%         num2str(sigmaBounds(1)), ...
+%         num2str(sigmaBounds(2)), ...
         num2str(lobeDistBounds(1)), ...
         num2str(lobeDistBounds(2)), ...
         num2str(ampRatioLimit), ...
@@ -228,16 +237,22 @@ while anotherpass == true
         num2str(fitErrorRange(2)), ...
         num2str(numPhotonRange(1)), ...
         num2str(numPhotonRange(2)), ...
+        num2str(xyPrecRange(1)),...
+        num2str(xyPrecRange(2)),...
+        num2str(zPrecRange(1)),...
+        num2str(zPrecRange(2)),...
         };
     num_lines = 1;
     inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
     
-    sigmaBounds = [str2double(inputdialog{1}) str2double(inputdialog{2})];   %[1.2 2.7];    % sets [min max] allowed sigma for double Gaussian fit (in units of pixels)
-    lobeDistBounds = [str2double(inputdialog{3}) str2double(inputdialog{4})];  %[7.0 9.5]; % sets [min max] allowed interlobe distance for double Gaussian fit (in units of pixels)
-    ampRatioLimit = str2double(inputdialog{5});
-    sigmaRatioLimit = str2double(inputdialog{6});
-    fitErrorRange = [str2double(inputdialog{7}) str2double(inputdialog{8})];
-    numPhotonRange = [str2double(inputdialog{9}) str2double(inputdialog{10})];
+    %     sigmaBounds = [str2double(inputdialog{1}) str2double(inputdialog{2})];   %[1.2 2.7];    % sets [min max] allowed sigma for double Gaussian fit (in units of pixels)
+    lobeDistBounds = [str2double(inputdialog{1}) str2double(inputdialog{2})];  %[7.0 9.5]; % sets [min max] allowed interlobe distance for double Gaussian fit (in units of pixels)
+    ampRatioLimit = str2double(inputdialog{3});
+    sigmaRatioLimit = str2double(inputdialog{4});
+    fitErrorRange = [str2double(inputdialog{5}) str2double(inputdialog{6})];
+    numPhotonRange = [str2double(inputdialog{7}) str2double(inputdialog{8})];
+    xyPrecRange = [str2double(inputdialog{9}) str2double(inputdialog{10})];
+    zPrecRange = [str2double(inputdialog{11}) str2double(inputdialog{12})];
     
     %% Plot the white light image if specified
     if whiteLightFile ~= 0
@@ -258,6 +273,8 @@ while anotherpass == true
         %         (1:(whiteLightInfo(1).Height)) * nmPerPixel + wlShiftY);
     end
     
+
+    
     %% Now re-evaluate the goodness of the fits
     
     % Conditions for fits (play with these):
@@ -271,12 +288,29 @@ while anotherpass == true
     fitErrorCol = 16;
     goodFitFlagCol = 17;
     numPhotonCol = 21;
+    bkgndCol = 15;
     lobeDistCol = 22;
     ampRatioCol = 23;
     sigmaRatioCol = 24;
     
     
     for i = 1:size(catPSFfits,1)
+        
+        % compute localization precision as a function of the number of photons
+        % Empirically determined amplitudes for fitting function based on
+        % localization precisision calibration collected on 20120518 on 8a back setup.
+        amplitude =  [  361035.867260138,22.2956414971275;...   %   [A1x  A2x]
+            348907.934759022,28.3183226442783;...   %   [A1y  A2y]
+            840446.405407229,23.3314294806927];      %   [A1z  A2z]
+        
+        numPhotons = catPSFfits(i,numPhotonCol);
+        meanBkgnd = catPSFfits(i,bkgndCol);
+        % Equation 4 of Stallinga and Rieger, ISBI, Barcelona conference proveedings
+        sigmaX = sqrt(amplitude(1,1) .* (1./numPhotons) + amplitude(1,1)*4*amplitude(1,2) .* meanBkgnd./(numPhotons).^2 + amplitude(1,1) .* (1./numPhotons) .* sqrt((2*amplitude(1,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(1,2)*(meanBkgnd./numPhotons)))));
+        sigmaY = sqrt(amplitude(2,1) .* (1./numPhotons) + amplitude(2,1)*4*amplitude(2,2) .* meanBkgnd./(numPhotons).^2 + amplitude(2,1) .* (1./numPhotons) .* sqrt((2*amplitude(2,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(2,2)*(meanBkgnd./numPhotons)))));
+        sigmaZ = sqrt(amplitude(3,1) .* (1./numPhotons) + amplitude(3,1)*4*amplitude(3,2) .* meanBkgnd./(numPhotons).^2 + amplitude(3,1) .* (1./numPhotons) .* sqrt((2*amplitude(3,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(3,2)*(meanBkgnd./numPhotons)))));
+        
+        
         
         if catPSFfits(i,goodFitFlagCol) == -1001 || ...
                 catPSFfits(i,goodFitFlagCol) == -1002 || ...
@@ -300,6 +334,11 @@ while anotherpass == true
                 catPSFfits(i,fitErrorCol)*conversionFactor/catPSFfits(i,numPhotonCol) < fitErrorRange(1)
             
             catPSFfits(i,goodFitFlagCol) = -1007;
+            
+        elseif sigmaX < xyPrecRange(1) || sigmaX > xyPrecRange(2) ||...
+               sigmaZ < zPrecRange(1) || sigmaZ > zPrecRange(2)
+            
+            catPSFfits(i,goodFitFlagCol) = -1008;
         else
             catPSFfits(i,goodFitFlagCol) = 3;
         end
@@ -322,16 +361,24 @@ while anotherpass == true
     if sum(goodFits) < 5
         warning('Very few (<5) fits passed the filters. Double-check limits.');
     end
-    if useFidCorrections
-        goodFits = goodFits & zFidCorrected >= zRange(1) & zFidCorrected <= zRange(2);
+    if ~isnan(catPSFfits(1,30))
+%         goodFits = goodFits & zFidCorrected >= zRange(1) & zFidCorrected <= zRange(2);
+%         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
+%         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
+%         xLoc = xFidCorrected(goodFits);
+%         yLoc = yFidCorrected(goodFits);
+%         zLoc = zFidCorrected(goodFits);
+%         xLoc_bad = xFidCorrected(badFits);
+%         yLoc_bad = yFidCorrected(badFits);
+        goodFits = goodFits & catPSFfits(:,30) >= zRange(1) & catPSFfits(:,30) <= zRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
-        xLoc = xFidCorrected(goodFits);
-        yLoc = yFidCorrected(goodFits);
-        zLoc = zFidCorrected(goodFits);
-        xLoc_bad = xFidCorrected(badFits);
-        yLoc_bad = yFidCorrected(badFits);
-
+        xLoc = catPSFfits(goodFits,28);
+        yLoc = catPSFfits(goodFits,29);
+        zLoc = catPSFfits(goodFits,30);
+        xLoc_bad = catPSFfits(badFits,28);
+        yLoc_bad = catPSFfits(badFits,29);
+        
     else
         goodFits = goodFits & catPSFfits(:,27) >= zRange(1) & catPSFfits(:,27) <= zRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
@@ -394,6 +441,7 @@ while anotherpass == true
     xLoc = xLoc(validPoints);
     yLoc = yLoc(validPoints);
     zLoc = zLoc(validPoints);
+    [std(xLoc) std(yLoc) std(zLoc)]
     numPhotons = numPhotons(validPoints);
     meanBkgnd = meanBkgnd(validPoints);
     frameNum = frameNum(validPoints);
@@ -414,30 +462,29 @@ while anotherpass == true
     %     sigmaY = 550./(1.5*numPhotons./sqrt(meanBkgnd)).^0.52;
     %     sigmaZ = 829./(1.5*numPhotons./sqrt(meanBkgnd)).^0.49;
     
-%     % Empirically determined amplitudes for fitting function based on
-%     % localization precisision calibration collected on 20120402 on 8a back setup.
-%     amplitude =  [  606316.910875840,1351845.90313904;...   %   [A1x  A2x]
-%                     463419.307260597,1230505.00679917;...   %   [A1y  A2y]
-%                     990499.159483260,3178237.19926875]      %   [A1z  A2z]
-
-      % Empirically determined amplitudes for fitting function based on
-%     % localization precisision calibration collected on 20120518 on 8a back setup.
-%     %%
-%     numPhotons = 500;
-%     meanBkgnd = 5;
-%     amplitude =  [  467376.158647402,1696621.37143132;...   %   [A1x  A2x]
-%                     472618.572573088,1601434.40940051;...   %   [A1y  A2y]
-%                     1096609.27949884,3959185.51690004];      %   [A1z  A2z]
-% 
-%     sigmaX = sqrt(amplitude(1,1) .* (1./numPhotons).^1 + amplitude(1,2) .* (meanBkgnd./numPhotons).^2)
-%     sigmaY = sqrt(amplitude(2,1) .* (1./numPhotons).^1 + amplitude(2,2) .* (meanBkgnd./numPhotons).^2)
-%     sigmaZ = sqrt(amplitude(3,1) .* (1./numPhotons).^1 + amplitude(3,2) .* (meanBkgnd./numPhotons).^2)
-%     %%
+    %     % Empirically determined amplitudes for fitting function based on
+    %     % localization precisision calibration collected on 20120402 on 8a back setup.
+    %     amplitude =  [  606316.910875840,1351845.90313904;...   %   [A1x  A2x]
+    %                     463419.307260597,1230505.00679917;...   %   [A1y  A2y]
+    %                     990499.159483260,3178237.19926875]      %   [A1z  A2z]
+    
     % Empirically determined amplitudes for fitting function based on
-    % localization precisision calibration collected on 20120518 on 8a back setup.
+    %     % localization precisision calibration collected on 20120518 on 8a back setup.
+    %     %%
+    %     numPhotons = 500;
+    %     meanBkgnd = 5;
+    %     amplitude =  [  467376.158647402,1696621.37143132;...   %   [A1x  A2x]
+    %                     472618.572573088,1601434.40940051;...   %   [A1y  A2y]
+    %                     1096609.27949884,3959185.51690004];      %   [A1z  A2z]
+    %
+    %     sigmaX = sqrt(amplitude(1,1) .* (1./numPhotons).^1 + amplitude(1,2) .* (meanBkgnd./numPhotons).^2)
+    %     sigmaY = sqrt(amplitude(2,1) .* (1./numPhotons).^1 + amplitude(2,2) .* (meanBkgnd./numPhotons).^2)
+    %     sigmaZ = sqrt(amplitude(3,1) .* (1./numPhotons).^1 + amplitude(3,2) .* (meanBkgnd./numPhotons).^2)
+    %     %%
+    
     amplitude =  [  361035.867260138,22.2956414971275;...   %   [A1x  A2x]
-                    348907.934759022,28.3183226442783;...   %   [A1y  A2y]
-                    840446.405407229,23.3314294806927];      %   [A1z  A2z]
+        348907.934759022,28.3183226442783;...   %   [A1y  A2y]
+        840446.405407229,23.3314294806927];      %   [A1z  A2z]
     
     % Equation 4 of Stallinga and Rieger, ISBI, Barcelona conference proveedings
     sigmaX = sqrt(amplitude(1,1) .* (1./numPhotons) + amplitude(1,1)*4*amplitude(1,2) .* meanBkgnd./(numPhotons).^2 + amplitude(1,1) .* (1./numPhotons) .* sqrt((2*amplitude(1,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(1,2)*(meanBkgnd./numPhotons)))));
@@ -445,21 +492,21 @@ while anotherpass == true
     sigmaZ = sqrt(amplitude(3,1) .* (1./numPhotons) + amplitude(3,1)*4*amplitude(3,2) .* meanBkgnd./(numPhotons).^2 + amplitude(3,1) .* (1./numPhotons) .* sqrt((2*amplitude(3,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(3,2)*(meanBkgnd./numPhotons)))));
     
     
-%     %%
-%     amplitude =  [  360000,22;...   %   [A1x  A2x]
-%                     350000,28;...   %   [A1y  A2y]
-%                     840000,23];      %   [A1z  A2z]
-%     numPhotons = 4000;
-%     meanBkgnd = 7;
-%     sigmaX - sqrt(amplitude(1,1) .* (1./numPhotons) + amplitude(1,1)*4*amplitude(1,2) .* meanBkgnd./(numPhotons).^2 + amplitude(1,1) .* (1./numPhotons) .* sqrt((2*amplitude(1,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(1,2)*(meanBkgnd./numPhotons)))))
-%     sigmaY - sqrt(amplitude(2,1) .* (1./numPhotons) + amplitude(2,1)*4*amplitude(2,2) .* meanBkgnd./(numPhotons).^2 + amplitude(2,1) .* (1./numPhotons) .* sqrt((2*amplitude(2,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(2,2)*(meanBkgnd./numPhotons)))))
-%     sigmaZ - sqrt(amplitude(3,1) .* (1./numPhotons) + amplitude(3,1)*4*amplitude(3,2) .* meanBkgnd./(numPhotons).^2 + amplitude(3,1) .* (1./numPhotons) .* sqrt((2*amplitude(3,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(3,2)*(meanBkgnd./numPhotons)))))
-%     %%
+    %     %%
+    %     amplitude =  [  360000,22;...   %   [A1x  A2x]
+    %                     350000,28;...   %   [A1y  A2y]
+    %                     840000,23];      %   [A1z  A2z]
+    %     numPhotons = 4000;
+    %     meanBkgnd = 7;
+    %     sigmaX - sqrt(amplitude(1,1) .* (1./numPhotons) + amplitude(1,1)*4*amplitude(1,2) .* meanBkgnd./(numPhotons).^2 + amplitude(1,1) .* (1./numPhotons) .* sqrt((2*amplitude(1,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(1,2)*(meanBkgnd./numPhotons)))))
+    %     sigmaY - sqrt(amplitude(2,1) .* (1./numPhotons) + amplitude(2,1)*4*amplitude(2,2) .* meanBkgnd./(numPhotons).^2 + amplitude(2,1) .* (1./numPhotons) .* sqrt((2*amplitude(2,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(2,2)*(meanBkgnd./numPhotons)))))
+    %     sigmaZ - sqrt(amplitude(3,1) .* (1./numPhotons) + amplitude(3,1)*4*amplitude(3,2) .* meanBkgnd./(numPhotons).^2 + amplitude(3,1) .* (1./numPhotons) .* sqrt((2*amplitude(3,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(3,2)*(meanBkgnd./numPhotons)))))
+    %     %%
     
     
     meanNumPhotons = mean(numPhotons);
-%     localizationPrecision = [mean(sigmaX),mean(sigmaY),mean(sigmaZ)];
-%     frameNum;
+    %     localizationPrecision = [mean(sigmaX),mean(sigmaY),mean(sigmaZ)];
+    %     frameNum;
     subplot(2,2,3:4)
     %     hist(frameNum,1:length(frames))
     hist(frameNum,frameNum(1):frameNum(length(frameNum)))
@@ -558,6 +605,10 @@ while anotherpass == true
     switch questiondialog
         case 'Yes'
             pass = pass + 1;
+            close 
+            close
+            close
+            close 
         case 'No'
             anotherpass = false;
         case 'Cancel'
@@ -572,7 +623,8 @@ savePath = [savePath saveFile '/'];
 mkdir(savePath);
 if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
-        'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange' );
+        'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
+        'wlShiftX', 'wlShiftY');
 end
 %%
 % output excel spreadsheet

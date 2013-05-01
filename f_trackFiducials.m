@@ -149,9 +149,9 @@ for stack = 1:length(dataFile)
         hROI = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         imagesc(dataAvg);axis image;colormap hot;
         if channel == 'g' || channel == '0'
-            ROI = imrect(gca,[1 1 270 270]);
+            ROI = imrect(gca,[1 1 64 64]);
         elseif channel == 'r'
-            ROI = imrect(gca,[243 243 270 270]);
+            ROI = imrect(gca,[243 243 64 64]);
         end
         
         title({'Double-click to choose region of interest for PSF extraction' ...
@@ -281,17 +281,18 @@ for stack = 1:length(dataFile)
     
     %% Identify frames to analyze
     
-    if ~isequal(logPath,0)
-        sifLogData =  importdata([logPath logFile{stack}]);
-        sifLogData = sifLogData(1:numFrames,:);
-        if channel == 'g'
-            selectedFrames = find(sifLogData(:,2) == 1);
-        elseif channel == 'r'
-            selectedFrames = find(sifLogData(:,3) == 1);
-        end
-    else
-        selectedFrames = frames;
-    end
+%     if ~isequal(logPath,0)
+%         sifLogData =  importdata([logPath logFile{stack}]);
+%         sifLogData = sifLogData(1:numFrames,:);
+%         if channel == 'g'
+%             selectedFrames = find(sifLogData(:,2) == 1);
+%         elseif channel == 'r'
+%             selectedFrames = find(sifLogData(:,3) == 1);
+%         end
+%     else
+%         selectedFrames = frames;
+%     end
+    selectedFrames = frames;
 
     for a=1:numFrames
         
