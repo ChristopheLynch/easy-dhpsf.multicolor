@@ -299,7 +299,7 @@ for stack = 1:length(dataFile)
         if ~logical(sum(frames(a)==selectedFrames))
             continue
         end
-        
+
         data = double(imread([dataPath dataFile{stack}],a,'Info',dataFileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ...
             ROI(1):ROI(1)+ROI(3)-1);
@@ -419,7 +419,7 @@ for stack = 1:length(dataFile)
             clear H dataFT peakImg
             
             %% filter out extraneous matches due to very strong signals
-            
+         
             if numPSFLocs > 0
                 % sort location matrix in decending order of confidence
                 temp = sortrows(PSFLocs(1:numPSFLocs,:),-4);
@@ -429,7 +429,7 @@ for stack = 1:length(dataFile)
                 for c=2:size(temp,1)
                     % make sure that this candidate location is a minimum distance away
                     % from all other candidate locations
-                    if sum((temp(c,1)-PSFLocs(1:numPSFLocs,1)).^2 + (temp(c,2)-PSFLocs(1:numPSFLocs,2)).^2 >= minDistBetweenSMs^2) == numPSFLocs
+                    if sum((temp(c,1)-PSFLocs(1:numPSFLocs,1)).^2 + (temp(c,2)-PSFLocs(1:numPSFLocs,2)).^2 >= (10*minDistBetweenSMs)^2) == numPSFLocs
                         % add it to list of locations
                         numPSFLocs = numPSFLocs + 1;
                         PSFLocs(numPSFLocs,:) = temp(c,:);
@@ -439,6 +439,11 @@ for stack = 1:length(dataFile)
             
             %         totalPSFfits(numPSFfits+1:numPSFfits+numPSFLocs,1:6) = ...
             %             [frames(a)*ones(numPSFLocs,1) (1:numPSFLocs)' PSFLocs(1:numPSFLocs,:)];
+            
+            % if numPSFLocs > 1, this will create a problem, because the
+            % code below is not executed.  TODO:  The definition of
+            % numPSFLocs needs to be made more robust and the logic
+            % statements should be modified.
             
             if numPSFLocs == 1
                 % create indices to use for fitting

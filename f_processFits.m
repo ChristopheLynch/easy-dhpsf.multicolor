@@ -33,8 +33,8 @@
 function f_processFits(catPSFfits,numFrames,fitFilePrefix)
 useTimeColors = 0;
 numPhotonRange = [0 100000];
-xyPrecRange = [1 100];
-zPrecRange = [1 100];
+xyPrecRange = [0 100];
+zPrecRange = [0 100];
 
 load([fitFilePrefix{1} 'molecule fits.mat']);
 
@@ -292,8 +292,7 @@ while anotherpass == true
     lobeDistCol = 22;
     ampRatioCol = 23;
     sigmaRatioCol = 24;
-    
-    
+        
     for i = 1:size(catPSFfits,1)
         
         % compute localization precision as a function of the number of photons
@@ -448,7 +447,7 @@ while anotherpass == true
     PSFfits_bad = PSFfits_bad(invalidPoints,:);
     hRejections = figure;
     subplot(2,2,1:2)
-    x = -1007:1:-1001;
+    x = -1008:1:-1001;
     hist(PSFfits_bad(PSFfits_bad(:,17)<-10,17),x)
     xlabel('Error Flag');ylabel('Frequency');
     title({[num2str(size(PSFfits_bad,1)) ' bad localizations']});
@@ -572,18 +571,31 @@ while anotherpass == true
     ROICenterX = ROI(1)+ROI(3)/2;
     ROICenterY = ROI(2)+ROI(4)/2;
     
-    % todo: add a way to get around this if 
-    distToPeakIntensity = sqrt((laser_x_nm-ROICenterX)^2 + (laser_y_nm-ROICenterY)^2);
-    meanIntensityInROI = peakIntensity * exp(-((2*distToPeakIntensity^2)/((2*mean([sigma_x_nm, sigma_y_nm]))^2)));
-    
-    title({[num2str(length(xLoc)) ' localizations'];...
-        ['Mean Number of Signal Photons = ' num2str(meanNumPhotons) ' per frame'];...
-        ['Mean Number of Background Photons = ' num2str(mean(meanBkgnd)) ' per pixel per frame'];...
-        ['Localization Precision \sigma_x = ' num2str(mean(sigmaX)) ' nm'];...
-        ['Localization Precision \sigma_y = ' num2str(mean(sigmaY)) ' nm'];...
-        ['Localization Precision \sigma_z = ' num2str(mean(sigmaZ)) ' nm'];...
-        ['Laser Intensity = ' num2str(meanIntensityInROI) ' W/cm^2']},...
-        'color','w');
+    % todo: add a way to get around this if
+    if exist('laser_x_nm', 'var')
+        
+        distToPeakIntensity = sqrt((laser_x_nm-ROICenterX)^2 + (laser_y_nm-ROICenterY)^2);
+        meanIntensityInROI = peakIntensity * exp(-((2*distToPeakIntensity^2)/((2*mean([sigma_x_nm, sigma_y_nm]))^2)));
+        
+        title({[num2str(length(xLoc)) ' localizations'];...
+            ['Mean Number of Signal Photons = ' num2str(meanNumPhotons) ' per frame'];...
+            ['Mean Number of Background Photons = ' num2str(mean(meanBkgnd)) ' per pixel per frame'];...
+            ['Localization Precision \sigma_x = ' num2str(mean(sigmaX)) ' nm'];...
+            ['Localization Precision \sigma_y = ' num2str(mean(sigmaY)) ' nm'];...
+            ['Localization Precision \sigma_z = ' num2str(mean(sigmaZ)) ' nm'];...
+            ['Laser Intensity = ' num2str(meanIntensityInROI) ' W/cm^2']},...
+            'color','w');
+    else
+        
+        title({[num2str(length(xLoc)) ' localizations'];...
+            ['Mean Number of Signal Photons = ' num2str(meanNumPhotons) ' per frame'];...
+            ['Mean Number of Background Photons = ' num2str(mean(meanBkgnd)) ' per pixel per frame'];...
+            ['Localization Precision \sigma_x = ' num2str(mean(sigmaX)) ' nm'];...
+            ['Localization Precision \sigma_y = ' num2str(mean(sigmaY)) ' nm'];...
+            ['Localization Precision \sigma_z = ' num2str(mean(sigmaZ)) ' nm']},...
+            'color','w');
+    end
+
     set(gca,'color','k');
     set(gca,'xcolor','w');set(gca,'ycolor','w');set(gca,'zcolor','w');
     
