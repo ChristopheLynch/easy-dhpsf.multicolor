@@ -25,6 +25,21 @@
 % NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+% to be incorporated for an 'import' function:
+
+% loadNum =1;
+% while loadNum ~= 0
+% [~,tempPath] = uigetfile;
+% if tempPath == 0
+% break
+% else
+% r.fitFilePrefix{loadNum} = tempPath;
+% loadNum = loadNum+1;
+% end
+% end
+
+% also add an 'autosave'
+
 function easy_dhpsf()
 % easy_dhpsf allows scientific users to extract single-molecule
 % localizations in 3D when using the double-helix point spread function
