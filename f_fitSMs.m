@@ -35,6 +35,12 @@ function [outputFilePrefix] = ...
 % precisely localized using a double gaussian fit and corrected for drift 
 % using the results from f_trackFiducials.
 
+printOutputFrames = 0;
+
+if printOutputFrames == 1
+    mkdir('output images');
+end
+
 % initialize parameters
 scrsz = get(0,'ScreenSize');
 conversionFactor = conversionGain/EMGain;
@@ -71,109 +77,87 @@ outputFilePrefix = cell(1,length(dataFile));
 selectedFiles = 1:length(dataFile);
 
 % allows user to select subset of frames, at the beginning, for all files
-dlg_title = 'Select Frames (default: use all frames)';
+%dlg_title = 'Select Frames (default: use all frames)';
+dlg_title = 'Estimate laser profile?';
 num_lines = 1;
 def = {};
 prompt = {};
 
-% populates 'fileInfo' and 'numFrames' for all files, and generates the
-% fields for the frame selection dlg
-fileInfoAll=cell(length(selectedFiles),1);
-numFramesAll = zeros(length(selectedFiles),1);
-def = cell(length(selectedFiles)+1,1);
-prompt = cell(length(selectedFiles)+1,1);
-%tic
-for i = 1:length(selectedFiles)
-    fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
-    numFramesAll(i) = length(fileInfoAll{i});
-    def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
-    prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
-end
-%toc
-    def{end} = 'Yes';
-    prompt{end} = 'Do you want to estimate the laser profile?';
-    
-    %         temp = inputdlg({'Input frames to process for finding DH-PSFs (ex. [100:199 205 380])',...
-%                          'Do you want to estimate the laser profile?'},...
-%                          'Select frames and whether to estimate irradiation',...
-%                          1,...
-%                          {['[1:' num2str(length(fileInfo)) ']'],...
-%                           'Yes'});        
+%%%%%%%%%%%%%%%%
+def = {'No'};
+prompt = {'Do you want to estimate the laser profile?'};
+%%%%%%%%%%%%%%%% this comment and the one below can be uncommented to allow
+%%%%%%%%%%%%%%%% selection of specific frames: however, this is *slow*
+% % populates 'fileInfo' and 'numFrames' for all files, and generates the
+% % fields for the frame selection dlg
+% fileInfoAll=cell(length(selectedFiles),1);
+% numFramesAll = zeros(length(selectedFiles),1);
+% def = cell(length(selectedFiles)+1,1);
+% prompt = cell(length(selectedFiles)+1,1);
 % 
-%         frames = str2num(temp{1}); %% TODO: This only is called for the first iteration of stack =1
-%        findLaserInt = temp{2}=='Yes';
-
+% for i = 1:length(selectedFiles)
+%     fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
+%     numFramesAll(i) = length(fileInfoAll{i});
+%     def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
+%     prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
+% end
+%     def{end} = 'No';
+%     prompt{end} = 'Do you want to estimate the laser profile?';
     
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-
-for i = 1:length(selectedFiles)
-    framesAll{i} = str2num(inputdialog{i});
-end
+    %%%%%%%%%%%%%%%%** this must be uncommented if selecting frames **
+    % for i = 1:length(selectedFiles)
+    %     framesAll{i} = str2num(inputdialog{i});
+    % end
     findLaserInt = strcmp(inputdialog{end},'Yes');
     
     % This information should be passed from the earlier execution of
-    % this code in f_calSMidentification
-    [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
-        'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
-        'MultiSelect', 'on');
-    if isequal(logPath,0)
-        logFile = 'not specified';
-    end
-    if ischar(logFile)
-        logFile = cellstr(logFile);
+    % this code in f_calSMidentification, but we get another chance to
+    % select it if it wasn't specified
+    if isequal(logFile,0)
+        [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
+            'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
+            'MultiSelect', 'on');
+        if isequal(logPath,0)
+            logFile = 'not specified';
+        end
+        if ischar(logFile)
+            logFile = cellstr(logFile);
+        end
+        % sets absolute frame number for relating data to sequence log
+        absFrameNum = 1;
     end
     
-
+    dlg_title = 'Filtering control points?';
+    prompt = {  'If control points: how many stationary frames for each position? (Cancel if not CP)',...
+            };
+    def = {    '20', ... 
+            };
+    num_lines = 1;
+    inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+    if ~isempty(inputdialog)
+        maxNumMeasurement = str2double(inputdialog{1});
+        filterCPs = true;
+    else
+        filterCPs = false;
+    end
+    
 %% begin fitting loop over files
 for stack = selectedFiles % = 1:length(dataFile)
-
-    fileIdx = find(selectedFiles == stack); 
     
-    fileInfo = fileInfoAll{fileIdx};
-    frames = framesAll{fileIdx};
-    numFrames = numFramesAll(fileIdx);
+    %%% this is an efficient way to set these variables if frames were
+    %%% selected above
+%     fileIdx = find(selectedFiles == stack); 
+%     fileInfo = fileInfoAll{fileIdx};
+%     frames = framesAll{fileIdx};
+%     numFrames = numFramesAll(fileIdx);
     
-    fileInfo = fileInfoAll{fileIdx};
-    %fileInfo = imfinfo([dataPath dataFile{stack}]);
-    numFrames = numFramesAll(fileIdx);
-    %numFrames = length(fileInfo);
-    frames = framesAll{fileIdx};
-    %frames = 1:numFrames;
+    %%% these variables must be set this way if frames were not selected
+    fileInfo = imfinfo([dataPath dataFile{stack}]);
+    numFrames = length(fileInfo);
+    frames = 1:numFrames;
     imgHeight = fileInfo(1).Height;
     imgWidth = fileInfo(1).Width;
-    
-    if stack == 1
-        
-        if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
-            templateInfo = imfinfo(templateFile);
-            if templateInfo(1).Height ~= templateInfo(1).Width
-                error('Template is not square');
-            end
-            templateSize = templateInfo(1).Height;
-        else
-            load(templateFile);
-            templateSize = size(template,2);
-        end
-%   
-%         temp = inputdlg({'Input frames to process for finding DH-PSFs (ex. [100:199 205 380])',...
-%                          'Do you want to estimate the laser profile?'},...
-%                          'Select frames and whether to estimate irradiation',...
-%                          1,...
-%                          {['[1:' num2str(length(fileInfo)) ']'],...
-%                           'Yes'});        
-% 
-%         frames = str2num(temp{1}); %% TODO: This only is called for the first iteration of stack =1
-%        findLaserInt = temp{2}=='Yes';
-        
-        if findLaserInt
-            temp = inputdlg({'What was the laser power at the objective? (in mW)'},...
-                 'Input laser power',...
-                 1,...
-                 {'0'});    
-            powerAtObjective = str2double(temp{1})/1000;
-        end
-    end
-    
     %% create output log filenames
     
     % saves in labeled directory if a channel is selected
@@ -186,7 +170,8 @@ for stack = selectedFiles % = 1:length(dataFile)
     end
     mkdir(outputFilePrefix{stack});
     
-    if stack == 1
+    if stack == 1 %%% begin init
+        %% miscellaneous bookkeeping on the darkfile / template / data
         % Compute darkAvg counts
         
         if ~isequal(darkFile,0)
@@ -194,8 +179,8 @@ for stack = selectedFiles % = 1:length(dataFile)
             darkFileInfo = imfinfo(darkFile);
             numDarkFrames = length(darkFileInfo);
             darkAvg = zeros(darkFileInfo(1).Height,darkFileInfo(1).Width);
-            for frame = 1:numDarkFrames
-                darkAvg = darkAvg + double(imread(darkFile,frame,'Info',darkFileInfo));
+            for dframe = 1:numDarkFrames
+                darkAvg = darkAvg + double(imread(darkFile,dframe,'Info',darkFileInfo));
             end
             darkAvg = darkAvg/numDarkFrames;
             if ~isequal(size(darkAvg),[imgHeight imgWidth])
@@ -217,8 +202,17 @@ for stack = selectedFiles % = 1:length(dataFile)
 %         end
 %         avgImg = avgImg/200;
         
-        % define variables related to the templates
- 
+        %define variables related to the templates
+        if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
+            templateInfo = imfinfo(templateFile);
+            if templateInfo(1).Height ~= templateInfo(1).Width
+                error('Template is not square');
+            end
+            templateSize = templateInfo(1).Height;
+        else
+            load(templateFile);
+            templateSize = size(template,2);
+        end
         numTemplates = length(templateFrames); 
         templateColors = jet(numTemplates);
         
@@ -232,6 +226,16 @@ for stack = selectedFiles % = 1:length(dataFile)
         end
         cropWidth = ROI(3);
         cropHeight = ROI(4);
+        
+        %% trace out FoV if computing laser profile
+        
+        if findLaserInt
+            temp = inputdlg({'What was the laser power at the objective? (in mW)'},...
+                 'Input laser power',...
+                 1,...
+                 {'0'});    
+            powerAtObjective = str2double(temp{1})/1000;
+        end
         
         if findLaserInt == 1;
             avgImg = zeros(imgHeight,imgWidth);
@@ -277,38 +281,43 @@ for stack = selectedFiles % = 1:length(dataFile)
         % more heavily since SNR is higher there
         gaussianFilter = abs(fft2(fspecial('gaussian', [cropHeight cropWidth], gaussianFilterSigma)));
         
-        numFrames = length(frames);
         
-    end
+        
+    end %%% end init
     
     
-    %% Identify frames to analyze
-    frameNum = 1;
-    
+    %% Identify frames to analyze based on the sequence log
+    % load data and register sequence log to data frames
     if ~isequal(logPath,0)
-        if length(logFile) == length(dataFile)
+        if length(logFile) == length(dataFile) % if one sif file/data file
             sifLogData =  importdata([logPath logFile{stack}]);
             sifLogData = sifLogData(1:numFrames,:);
-        else
+        else % i.e., if only one sif file for all data files
             sifLogData =  importdata([logPath logFile{1}]);
-            sifLogData = sifLogData(frameNum:frameNum+numFrames-1,:);
-            frameNum = frameNum + numFrames;
+            sifLogData = sifLogData(absFrameNum:absFrameNum+numFrames-1,:);
+            absFrameNum = absFrameNum + numFrames;
         end
-        
-        if channel == 'g'   % use an intersect in case frames are limited by user
+    %%% Option 1: Select only stationary steps (for CP)
+    % works by selecting periods between the '-1' markers that signify motion
+    % if the length of the period != step dwell time (i.e., = translation period), skip
+    % 
+    motionFrames = find(sifLogData(:,1)==-1);  % This finds -1 entries in the shutters correspoding to moving frames
+    validPeriod = diff(motionFrames)==maxNumMeasurement+1;
+    validFrames = [];
+    validMotionFrames = motionFrames(validPeriod);
+    
+    for i = 1:length(validMotionFrames)
+        initFrame = validMotionFrames(i);
+        temp = (initFrame+3:initFrame+maxNumMeasurement)';
+        validFrames = [validFrames; temp];
+    end
+        frames = intersect(validFrames,frames);
+    %%% Option 2: Select only frames that are illuminated (SMACM 2-color)
+        if channel == 'g' && ~filterCPs   % use an intersect in case frames are limited by user
             frames = intersect(find(sifLogData(:,2) == 1),frames);
-        elseif channel == 'r'
+        elseif channel == 'r' && ~filterCPs
             frames = intersect(find(sifLogData(:,3) == 1),frames);
         end
-%         if channel == '0'
-%             selectedFrames = frames;
-%         elseif channel == 'g'
-%             selectedFrames = find(sifLogData(:,2) == 1);
-%         elseif channel == 'r'
-%             selectedFrames = find(sifLogData(:,3) == 1);
-%         end
-%     else
-%         selectedFrames = frames;
     end
     
     %% do template matching
@@ -635,8 +644,10 @@ for stack = selectedFiles % = 1:length(dataFile)
             [num2str(sum(PSFfits(:,11)>0)) ' successful fits']});
         
         drawnow;
-        %M(a) = getframe(h);
-        %imwrite(frame2im(M),'test_output.tif','tif','WriteMode','append');
+        if printOutputFrames == 1
+        set(gcf,'PaperPositionMode','auto');
+        saveas(hSMFits, ['output images\frame ' num2str(c) '.tif']);
+        end
     end
     elapsedTime = toc(startTime);
     totalPSFfits = totalPSFfits(1:numPSFfits,:);
@@ -650,6 +661,7 @@ for stack = selectedFiles % = 1:length(dataFile)
     close(hSMFits)
     fps = length(frames)/elapsedTime
     moleculesPerSec = numPSFfits/elapsedTime
+    
     %movie2avi(M,'output_v1.avi','fps',10,'Compression','FFDS');
     
     %% Measure the Gaussian Laser Intensity Distribution

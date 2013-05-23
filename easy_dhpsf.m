@@ -25,7 +25,8 @@
 % NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-% to be incorporated for an 'import' function:
+%%% TODO:
+%%% add an 'import' function of the form below:
 
 % loadNum =1;
 % while loadNum ~= 0
@@ -38,7 +39,22 @@
 % end
 % end
 
-% also add an 'autosave'
+%%% also add an 'autosave'
+
+%%% allow the user to rearrange threshold and fit files:
+% tempRaw = g.smacmRawFile;
+% for i = 1:9
+% g.smacmRawFile{i} = tempRaw{i+1};
+% end
+% g.smacmRawFile{10} = tempRaw{1};
+
+% tempFits = g.fitFilePrefix;
+% for i = 1:7
+% g.fitFilePrefix{i} = tempFits{i+1};
+% end
+% g.fitFilePrefix{8} = tempFits{1};
+
+
 
 function easy_dhpsf()
 % easy_dhpsf allows scientific users to extract single-molecule
@@ -690,7 +706,7 @@ set(hfig,'Visible','on');
         updateGUI;
     end
     function buttonOutReg_Callback(~,~)
-        [totalPSFFits,numFrames] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
+        [totalPSFfits,numFrames] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
 %         [matFile, matPath] = uiputfile({'*.mat';'*.*'},'Save localizations as old-style .mat file');
 %         if isequal(matFile,0)
 %             return;
@@ -701,7 +717,7 @@ set(hfig,'Visible','on');
         % these match the numbers in f_fitSMs
 %         ampRatioLimit = 0.5;
 %         sigmaRatioLimit = 0.4;
-        f_processFits(totalPSFFits,numFrames,s.fitFilePrefix);
+        f_processFits(totalPSFfits,numFrames,s.fitFilePrefix);
 %         f_processFits(totalPSFfits,numFrames,ROI,conversionFactor,...
 %             s.sigmaBounds,s.lobeDistBounds,ampRatioLimit,sigmaRatioLimit,...
 %             s.nmPerPixel);

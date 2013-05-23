@@ -194,9 +194,6 @@ for stack = selectedFiles
         [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
             'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
             'MultiSelect', 'on');
-        if isequal(logPath,0)
-            logFile = 'not specified';
-        end
         if ischar(logFile)
             logFile = cellstr(logFile);
         end
@@ -601,7 +598,7 @@ for stack = selectedFiles
         hold off;
         title({['Frame ' num2str(c) ': raw data - darkAvg counts'] ...
             ['ROI [xmin ymin width height] = ' mat2str(ROI)]});
-        
+
         drawnow;
     end
     elapsedTime = toc(startTime);

@@ -32,10 +32,10 @@
 % directly
 function f_processFits(catPSFfits,numFrames,fitFilePrefix)
 useTimeColors = 0;
-numPhotonRange = [0 100000];
+numPhotonRange = [0 1000000];
 xyPrecRange = [0 100];
 zPrecRange = [0 100];
-
+numFramesAll = sum(numFrames);
 load([fitFilePrefix{1} 'molecule fits.mat']);
 
 % Parameters
@@ -131,6 +131,7 @@ anotherpass = true;
 % end
 
 zRange = [-2000 2000];
+%if exist('numFramesAll');%TODO
 frameRange = [1 sum(numFramesAll)];
 fitErrorRange = [0 3];
 
@@ -142,37 +143,39 @@ while anotherpass == true
     if pass == 1
         
         fitErrorCol = 16;
-%         goodFitFlagCol = 17;
+        goodFitFlagCol = 17;
         numPhotonCol = 21;
         lobeDistCol = 22;
         ampRatioCol = 23;
         sigmaRatioCol = 24;
         
+        initGoodFits = catPSFfits(:,goodFitFlagCol) > 0;
+        
         figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         subplot(2,2,1)
-        hist(catPSFfits(:,lobeDistCol), 100)
+        hist(catPSFfits(initGoodFits,lobeDistCol), 100)
         xlabel('pixel'); ylabel('Frequency');
         title('Unfiltered Lobe Distance');
         xlim([4 14]);
         
         subplot(2,2,2)
-        fitError = catPSFfits(:,fitErrorCol)*conversionFactor./catPSFfits(:,numPhotonCol);
+        fitError = catPSFfits(initGoodFits,fitErrorCol)*conversionFactor./catPSFfits(initGoodFits,numPhotonCol);
         hist(fitError(fitError > 0 & fitError < 20), 100)
         xlabel('Fit Error'); ylabel('Frequency');
         title('Unfiltered Fit Error');
         xlim([0 8]);
         
         subplot(2,2,3)
-        hist(catPSFfits(:,ampRatioCol), 100)
+        hist(catPSFfits(initGoodFits,ampRatioCol), 100)
         xlabel('Amplitude Ratio'); ylabel('Frequency');
         title('Unfiltered Amplitude Ratio');
-        xlim([0.1 1]);
+        xlim([-0.1 1]);
         
         subplot(2,2,4)
-        hist(catPSFfits(:,sigmaRatioCol), 100)
+        hist(catPSFfits(initGoodFits,sigmaRatioCol), 100)
         xlabel('Sigma Ratio'); ylabel('Frequency');
         title('Unfiltered Sigma Ratio');
-        xlim([0.1 1]);
+        xlim([-0.1 1]);
         
         
         
@@ -304,6 +307,10 @@ while anotherpass == true
         
         numPhotons = catPSFfits(i,numPhotonCol);
         meanBkgnd = catPSFfits(i,bkgndCol);
+        
+        if any(meanBkgnd<0)
+            meanBkgnd(meanBkgnd<0) = 0;
+        end
         % Equation 4 of Stallinga and Rieger, ISBI, Barcelona conference proveedings
         sigmaX = sqrt(amplitude(1,1) .* (1./numPhotons) + amplitude(1,1)*4*amplitude(1,2) .* meanBkgnd./(numPhotons).^2 + amplitude(1,1) .* (1./numPhotons) .* sqrt((2*amplitude(1,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(1,2)*(meanBkgnd./numPhotons)))));
         sigmaY = sqrt(amplitude(2,1) .* (1./numPhotons) + amplitude(2,1)*4*amplitude(2,2) .* meanBkgnd./(numPhotons).^2 + amplitude(2,1) .* (1./numPhotons) .* sqrt((2*amplitude(2,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(2,2)*(meanBkgnd./numPhotons)))));
@@ -360,6 +367,9 @@ while anotherpass == true
     if sum(goodFits) < 5
         warning('Very few (<5) fits passed the filters. Double-check limits.');
     end
+    % corrects zRange for index mismatch (see below for the inverse
+    % transformation to the z position)
+    corrzRange = zRange * nOil/nSample;
     if ~isnan(catPSFfits(1,30))
 %         goodFits = goodFits & zFidCorrected >= zRange(1) & zFidCorrected <= zRange(2);
 %         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
@@ -369,7 +379,7 @@ while anotherpass == true
 %         zLoc = zFidCorrected(goodFits);
 %         xLoc_bad = xFidCorrected(badFits);
 %         yLoc_bad = yFidCorrected(badFits);
-        goodFits = goodFits & catPSFfits(:,30) >= zRange(1) & catPSFfits(:,30) <= zRange(2);
+        goodFits = goodFits & catPSFfits(:,30) >= corrzRange(1) & catPSFfits(:,30) <= corrzRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
         xLoc = catPSFfits(goodFits,28);
@@ -379,7 +389,7 @@ while anotherpass == true
         yLoc_bad = catPSFfits(badFits,29);
         
     else
-        goodFits = goodFits & catPSFfits(:,27) >= zRange(1) & catPSFfits(:,27) <= zRange(2);
+        goodFits = goodFits & catPSFfits(:,27) >= corrzRange(1) & catPSFfits(:,27) <= corrzRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
         xLoc = catPSFfits(goodFits,25);
@@ -389,7 +399,7 @@ while anotherpass == true
         yLoc_bad = catPSFfits(badFits,26);
 
     end
-
+    clear corrzRange
     zLoc = zLoc * nSample/nOil;
     numPhotons = catPSFfits(goodFits,21);
 %     meanBkgnd = totalPSFfits(goodFits,15)*conversionFactor;
@@ -440,7 +450,7 @@ while anotherpass == true
     xLoc = xLoc(validPoints);
     yLoc = yLoc(validPoints);
     zLoc = zLoc(validPoints);
-    [std(xLoc) std(yLoc) std(zLoc)]
+%     [std(xLoc) std(yLoc) std(zLoc)]
     numPhotons = numPhotons(validPoints);
     meanBkgnd = meanBkgnd(validPoints);
     frameNum = frameNum(validPoints);
@@ -486,6 +496,13 @@ while anotherpass == true
         840446.405407229,23.3314294806927];      %   [A1z  A2z]
     
     % Equation 4 of Stallinga and Rieger, ISBI, Barcelona conference proveedings
+    if any(meanBkgnd<0);
+        correctedBG = find(meanBkgnd<0);
+        warning([num2str(length(correctedBG))...
+            'values of meanBkgnd (indices below) were negative! Changing to 0.']);
+        meanBkgnd(correctedBG)=0;
+    end
+    
     sigmaX = sqrt(amplitude(1,1) .* (1./numPhotons) + amplitude(1,1)*4*amplitude(1,2) .* meanBkgnd./(numPhotons).^2 + amplitude(1,1) .* (1./numPhotons) .* sqrt((2*amplitude(1,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(1,2)*(meanBkgnd./numPhotons)))));
     sigmaY = sqrt(amplitude(2,1) .* (1./numPhotons) + amplitude(2,1)*4*amplitude(2,2) .* meanBkgnd./(numPhotons).^2 + amplitude(2,1) .* (1./numPhotons) .* sqrt((2*amplitude(2,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(2,2)*(meanBkgnd./numPhotons)))));
     sigmaZ = sqrt(amplitude(3,1) .* (1./numPhotons) + amplitude(3,1)*4*amplitude(3,2) .* meanBkgnd./(numPhotons).^2 + amplitude(3,1) .* (1./numPhotons) .* sqrt((2*amplitude(3,2)*(meanBkgnd./numPhotons))./(1+(4*amplitude(3,2)*(meanBkgnd./numPhotons)))));
@@ -636,7 +653,7 @@ mkdir(savePath);
 if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
-        'wlShiftX', 'wlShiftY');
+        'wlShiftX', 'wlShiftY','goodFits','correctedBG');
 end
 %%
 % output excel spreadsheet
