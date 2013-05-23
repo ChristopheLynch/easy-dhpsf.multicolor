@@ -169,7 +169,7 @@ function [ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasuremen
 dlg_title = 'Please Input Parameters';
 prompt = {  'How many stationary frames for each position?',...
         };
-def = {    '30', ... 
+def = {    '20', ... 
         };
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
@@ -524,7 +524,9 @@ function [ cpChannel1_approx, cpChannel2_approx, selectedFrame ] = handpickCPs(.
 % This function shows frames side by side to let the user handpick control points
 % The GUI interface and how many control points need to be selected could be optimized
 % Also the user should be allowed to terminate the handpicking himself
-
+%%% TODO: need to make sure that fits are NOT used when canceling:
+%%% numAssigned seems to keep increasing, which reduces total pairs chosen
+%%% before that routine quits if you change your mind about a pair
 scrsz = get(0,'ScreenSize');
 
 % Preallocate for vectors
@@ -553,6 +555,9 @@ for i = 1:10:length(cpFrames)
         isOKAY = 1;
         while isOKAY == 1
             [x,y,isOKAY] = clickPairs(numAssigned,isOKAY);
+            if isOKAY == 0
+                break
+            end
             title('Pick some more!')
             cpChannel1_approx(numAssigned+1,:) = [x(1),y(1)];
             cpChannel2_approx(numAssigned+1,:) = [x(2),y(2)];
