@@ -178,6 +178,7 @@ frameNum = frameNum(validPoints);
 f = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','k','renderer','opengl');
 
 if useTimeColors == 0
+    % plot is faster than scatter
     plot3(xLoc,yLoc,zLoc,'.','MarkerSize',scatterSize,...
         'Color',[1 1 0]);
 %     scatter3(xLoc,yLoc,zLoc,scatterSize,[1 1 0],'filled');

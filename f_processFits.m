@@ -417,8 +417,8 @@ while anotherpass == true
         imagesc(xRange,yRange,whiteLight);axis image;colormap gray;hold on;
     end
     
-    %scatter3(xLoc,yLoc,zLoc,1,'filled');
-    scatter(xLoc,yLoc,1,'filled');
+    % plot is faster than scatter
+    plot(xLoc,yLoc,'.','MarkerSize',1);
     xlim([min(xLoc(:))-500 max(xLoc(:))+500]);
     ylim([min(yLoc(:))-500 max(yLoc(:))+500]);
     xlabel('x (nm)');ylabel('y (nm)');
@@ -560,7 +560,10 @@ while anotherpass == true
     end
     
     if useTimeColors == 0
-        scatter3(xLoc,yLoc,zLoc,scatterSize,[1 1 0],'filled');
+        % plot is faster than scatter
+        plot3(xLoc,yLoc,zLoc,'.','MarkerSize',scatterSize,...
+            'Color',[1 1 0]);
+    %     scatter3(xLoc,yLoc,zLoc,scatterSize,[1 1 0],'filled');
     else
         %         scatter3(xLoc(a),yLoc(a),zLoc(a),scatterSize,frameNum(1):frameNum(length(frameNum)),'filled')
         markerColors = jet(frameNum(length(frameNum))-frameNum(1)+1);
