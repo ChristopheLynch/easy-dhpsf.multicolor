@@ -142,8 +142,10 @@ load('Identify_ControlPoints_3D_workspace.mat');
 
 % Assemble the full set of control points
 % The parameter fed to this function are chosen empirically, based on
-% previous results. 
-matlabpool open 3
+% previous results.
+temp=parcluster;
+matlabpool(temp,temp.NumWorkers-1);
+clear temp;
 [tform, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
                matched_cpLocs_reflected(:,5:7),matched_cpLocs_transmitted(:,5:7),'lwquadratic',60,'Gaussian',7,1, true);
 matlabpool close
