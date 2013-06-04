@@ -5,7 +5,7 @@ function [] = EvaluateTransform_3D_v2()
 
 % Ask user for relevant datafiles
 
-[CPFile CPPath] = uigetfile({'*.mat';'*.*'},'Open data file');
+[CPFile, CPPath] = uigetfile({'*.mat';'*.*'},'Open data file');
 if isequal(CPFile,0)
     error('User cancelled the program');
 end
@@ -20,7 +20,9 @@ jStep = 1;
 kStart = 0.5;
 kEnd = 1.3;
 kStep = 0.2;
-nCores = 3;
+temp=parcluster;        % query local machine for number of usable cores
+nCores = temp.NumWorkers-1; % set default to number of cores - 1
+clear temp;
 nCP = 1000;
 
 dlg_title = 'User input required';
