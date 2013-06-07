@@ -37,7 +37,7 @@ useDenoising = 1;
 
 if useFidCorrections
     
-%     fidFiles = {};
+
     
     for fileNum=1:length(fidFilePrefix)
 %         fidFiles = [fidFiles; {[fidPath fidFile]}];
