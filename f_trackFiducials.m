@@ -1,39 +1,39 @@
 % Copyright (c)2013, The Board of Trustees of The Leland Stanford Junior
 % University. All rights reserved.
-% 
-% Redistribution and use in source and binary forms, with or without 
-% modification, are permitted provided that the following conditions are 
+%
+% Redistribution and use in source and binary forms, with or without
+% modification, are permitted provided that the following conditions are
 % met:
-% 
-% Redistributions of source code must retain the above copyright notice, 
+%
+% Redistributions of source code must retain the above copyright notice,
 % this list of conditions and the following disclaimer.
-% Redistributions in binary form must reproduce the above copyright notice, 
-% this list of conditions and the following disclaimer in the documentation 
+% Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation
 % and/or other materials provided with the distribution.
-% Neither the name of the Leland Stanford Junior University nor the names 
-% of its contributors may be used to endorse or promote products derived 
+% Neither the name of the Leland Stanford Junior University nor the names
+% of its contributors may be used to endorse or promote products derived
 % from this software without specific prior written permission.
-% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
 % IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-% PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
-% PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-% PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
-% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+% PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+% PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+% PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-function [outputFilePrefix] = f_trackFiducials(dataFile,dataPath,calFile,calBeadIdx,templateFile,templateFrames,...
-                     darkFile,logFile,logPath,boxRadius,channel, gaussianFilterSigma,minDistBetweenSMs,...
-                     lobeDistBounds,conversionGain,nmPerPixel,EMGain,templateLocs,sigmaBounds)
+function [outputFilePrefix] = f_trackFiducials(dataFile,dataPath,calFile,calBeadIdx,templateFile,templateFrames,peakThreshold,...
+    darkFile,logFile,logPath,boxRadius,channel, gaussianFilterSigma,minDistBetweenSMs,...
+    lobeDistBounds,conversionGain,nmPerPixel,EMGain,templateLocs,sigmaBounds)
 % f_trackFiducials is a module in easy_dhpsf that extracts the position of
-% one or more fiducial beads in an image stack. This position is then used 
+% one or more fiducial beads in an image stack. This position is then used
 % to correct the fit localizations from that image stack.
 
- % sigmaBounds = [1.0 3.0] * 125.78 / nmPerPixel;
-    
+% sigmaBounds = [1.0 3.0] * 125.78 / nmPerPixel;
+
 conversionFactor = conversionGain/EMGain;
 
 % sigmaBounds = [1.0 3.0];       % sets [min max] allowed sigma for double Gaussian fit (in units of pixels)
@@ -52,7 +52,7 @@ outputFilePrefix = cell(1,length(dataFile));
 
 for stack = 1:length(dataFile)
     
-
+    
     
     dataFileInfo = imfinfo([dataPath dataFile{stack}]);
     numFrames = length(dataFileInfo);
@@ -61,9 +61,9 @@ for stack = 1:length(dataFile)
     imgWidth = dataFileInfo(1).Width;
     
     if stack == 1
-  
+        
         load(calFile)
-          
+        
         if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
             
             templateInfo = imfinfo(templateFile);
@@ -75,40 +75,40 @@ for stack = 1:length(dataFile)
             load(templateFile);
             templateSize = size(template,2);
         end
-
-        peakThreshold = 0.01*ones(length(templateFrames),1);
+        
+        %         peakThreshold = 0.01*ones(length(templateFrames),1);
         
         % Construct a questdlg with three options
-%         dlg_title = 'Please Verify';
-%         prompt = {  'dataFile = ' [dataFile{stack} ' to ' dataFile{length(dataFile)}], ...
-%             'darkFile = ' darkFile, ...
-%             'logFile = ' [logFile{stack} ' to ' logFile{length(logFile)}]
-%             };
-%         def =       { 'Yes'  };
-%         questiondialog = questdlg(prompt,dlg_title, def);
-%         % Handle response
-%         switch questiondialog
-%             case 'Yes'
-%             case 'No'
-%                 error('User cancelled the program');
-%             case 'Cancel'
-%                 error('User cancelled the program');
-%         end
+        %         dlg_title = 'Please Verify';
+        %         prompt = {  'dataFile = ' [dataFile{stack} ' to ' dataFile{length(dataFile)}], ...
+        %             'darkFile = ' darkFile, ...
+        %             'logFile = ' [logFile{stack} ' to ' logFile{length(logFile)}]
+        %             };
+        %         def =       { 'Yes'  };
+        %         questiondialog = questdlg(prompt,dlg_title, def);
+        %         % Handle response
+        %         switch questiondialog
+        %             case 'Yes'
+        %             case 'No'
+        %                 error('User cancelled the program');
+        %             case 'Cancel'
+        %                 error('User cancelled the program');
+        %         end
         
     end
-
+    
     % saves in labeled directory if a channel is selected
     if channel == '0'
         outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\fiduciaries ' ...
-        datestr(now,'yyyymmdd HHMM') '\'];
+            datestr(now,'yyyymmdd HHMM') '\'];
     else
         outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\' channel(1) ' fiduciaries ' ...
             datestr(now,'yyyymmdd HHMM') '\'];
     end
     mkdir(outputFilePrefix{stack});
     %     outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\fiduciaries ' ...
-%         datestr(now,'yyyymmdd HHMM') '\'];
-%     mkdir(outputFilePrefix{stack});
+    %         datestr(now,'yyyymmdd HHMM') '\'];
+    %     mkdir(outputFilePrefix{stack});
     
     
     if stack == 1
@@ -149,32 +149,32 @@ for stack = 1:length(dataFile)
         hROI = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         imagesc(dataAvg);axis image;colormap hot;
         if channel == 'g' || channel == '0'
-            ROI = imrect(gca,[1 1 64 64]);
+            ROI = imrect(gca,[1 1 128 128]);
         elseif channel == 'r'
-            ROI = imrect(gca,[243 243 64 64]);
+            ROI = imrect(gca,[243 243 128 128]);
         end
         
         title({'Double-click to choose region of interest for PSF extraction' ...
             mat2str(ROI.getPosition)});
         addNewPositionCallback(ROI,@(p) title({'Double-click to choose region of interest for PSF extraction' ...
             ['[xmin ymin width height] = ' mat2str(p,3)]}));
- %       make sure rectangle stays within image bounds
+        %       make sure rectangle stays within image bounds
         fcn = makeConstrainToRectFcn('imrect',get(gca,'XLim'),get(gca,'YLim'));
         setPositionConstraintFcn(ROI,fcn);
         ROI = round(wait(ROI));
         
-        % if odd, rounds down to nearest even number for width and height 
+        % if odd, rounds down to nearest even number for width and height
         % (must be divisible by two for padding step)
-        ROI(3) = 2*floor(ROI(3)/2); 
+        ROI(3) = 2*floor(ROI(3)/2);
         ROI(4) = 2*floor(ROI(4)/2);
-      
+        
         imgHeight = ROI(4);
         imgWidth = ROI(3);
         cropHeight = imgHeight;
         cropWidth = imgWidth;
         close(hROI)
         %% Ask user for molecule location(s)
-
+        
         % Plots the avg image .tif
         hMLocs = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         imagesc(dataAvg(ROI(2):ROI(2)+ROI(4)-1, ...
@@ -217,22 +217,22 @@ for stack = 1:length(dataFile)
         close(hMLocs)
         
         %% user picks background levels
-%         figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
-%         imagesc(dataAvg(ROI(2):ROI(2)+ROI(4)-1, ...
-%             ROI(1):ROI(1)+ROI(3)-1),[0 300]);
-%         axis image;colorbar;colormap hot;
-%         title('Measure [min max] for Gaussian Laser Background');
-%         dlg_title = 'Please Enter Thresholds for Gaussian Laser Background Fitting';
-%         prompt = {  'Lower Limit:', ...
-%             'Upper Limit:' ...
-%             };
-%         def = {     '20', ...
-%             '100' ...
-%             };
-%         num_lines = 1;
-%         inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-%         threshold = [str2double(inputdialog{1}) str2double(inputdialog{2})];
-%         
+        %         figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
+        %         imagesc(dataAvg(ROI(2):ROI(2)+ROI(4)-1, ...
+        %             ROI(1):ROI(1)+ROI(3)-1),[0 300]);
+        %         axis image;colorbar;colormap hot;
+        %         title('Measure [min max] for Gaussian Laser Background');
+        %         dlg_title = 'Please Enter Thresholds for Gaussian Laser Background Fitting';
+        %         prompt = {  'Lower Limit:', ...
+        %             'Upper Limit:' ...
+        %             };
+        %         def = {     '20', ...
+        %             '100' ...
+        %             };
+        %         num_lines = 1;
+        %         inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+        %         threshold = [str2double(inputdialog{1}) str2double(inputdialog{2})];
+        %
         
         %% prepare template for template matching
         
@@ -281,25 +281,25 @@ for stack = 1:length(dataFile)
     
     %% Identify frames to analyze
     
-%     if ~isequal(logPath,0)
-%         sifLogData =  importdata([logPath logFile{stack}]);
-%         sifLogData = sifLogData(1:numFrames,:);
-%         if channel == 'g'
-%             selectedFrames = find(sifLogData(:,2) == 1);
-%         elseif channel == 'r'
-%             selectedFrames = find(sifLogData(:,3) == 1);
-%         end
-%     else
-%         selectedFrames = frames;
-%     end
+    %     if ~isequal(logPath,0)
+    %         sifLogData =  importdata([logPath logFile{stack}]);
+    %         sifLogData = sifLogData(1:numFrames,:);
+    %         if channel == 'g'
+    %             selectedFrames = find(sifLogData(:,2) == 1);
+    %         elseif channel == 'r'
+    %             selectedFrames = find(sifLogData(:,3) == 1);
+    %         end
+    %     else
+    %         selectedFrames = frames;
+    %     end
     selectedFrames = frames;
-
+    
     for a=1:numFrames
         
         if ~logical(sum(frames(a)==selectedFrames))
             continue
         end
-
+        
         data = double(imread([dataPath dataFile{stack}],a,'Info',dataFileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ...
             ROI(1):ROI(1)+ROI(3)-1);
@@ -307,49 +307,49 @@ for stack = 1:length(dataFile)
         bkgndImg = f_waveletBackground(data);
         data = data - bkgndImg;
         
-%         %% compute background image for each frame
-%         
-%         %    bkgnd = data(bkgndROI(2):bkgndROI(2)+bkgndROI(4)-1, ...
-%         %        bkgndROI(1):bkgndROI(1)+bkgndROI(3)-1);
-%         %    bkgndMean = mean(bkgnd(:));
-%         [xIdx yIdx] = meshgrid(1:size(data,2), 1:size(data,1));
-%         if ~exist('bkgndFit','var')
-%             bkgndFit = [median(data(:))-min(data(:)) ...
-%                 size(data,2)/2 size(data,1)/2 ...
-%                 size(data,2)/4 size(data,1)/4 0 min(data(:))];
-%         end
-%         
-%         % Fit with lsqnonlin
-%         lowerBound = [0 size(data,2)/5 size(data,1)/5 ...
-%             size(data,2)/5 size(data,1)/5 -360 min(data(:))];
-%         upperBound = [max(data(:))-min(data(:)) size(data,2)*3/4 size(data,1)*3/4 ...
-%             size(data,2)*4/5 size(data,1)*4/5 360 max(data(:))];
-%         bkgndFit = lsqnonlin(@(x) singleGaussianRotOffset(x,data,xIdx,yIdx,threshold),...
-%             bkgndFit,lowerBound,upperBound);
-%         
-%         sigma_x = bkgndFit(4);
-%         sigma_y = bkgndFit(5);
-%         theta = bkgndFit(6)*pi/180;
-%         A = cos(theta)^2/2/sigma_x^2 + sin(theta)^2/2/sigma_y^2;
-%         B = -sin(2*theta)/4/sigma_x^2 + sin(2*theta)/4/sigma_y^2 ;
-%         C = sin(theta)^2/2/sigma_x^2 + cos(theta)^2/2/sigma_y^2;
-%         
-%         bkgndImg = bkgndFit(1)*exp( -(A*(xIdx-bkgndFit(2)).^2 + 2*B*(xIdx-bkgndFit(2)).*(yIdx-bkgndFit(3)) + C*(yIdx-bkgndFit(3)).^2)) ...
-%             +bkgndFit(7);
-%         %imwrite(uint16(bkgndImg),[bkgndFile num2str(a) '.tif'],'tif');
-%         bkgndFits(a,:) = [a bkgndFit];
+        %         %% compute background image for each frame
+        %
+        %         %    bkgnd = data(bkgndROI(2):bkgndROI(2)+bkgndROI(4)-1, ...
+        %         %        bkgndROI(1):bkgndROI(1)+bkgndROI(3)-1);
+        %         %    bkgndMean = mean(bkgnd(:));
+        %         [xIdx yIdx] = meshgrid(1:size(data,2), 1:size(data,1));
+        %         if ~exist('bkgndFit','var')
+        %             bkgndFit = [median(data(:))-min(data(:)) ...
+        %                 size(data,2)/2 size(data,1)/2 ...
+        %                 size(data,2)/4 size(data,1)/4 0 min(data(:))];
+        %         end
+        %
+        %         % Fit with lsqnonlin
+        %         lowerBound = [0 size(data,2)/5 size(data,1)/5 ...
+        %             size(data,2)/5 size(data,1)/5 -360 min(data(:))];
+        %         upperBound = [max(data(:))-min(data(:)) size(data,2)*3/4 size(data,1)*3/4 ...
+        %             size(data,2)*4/5 size(data,1)*4/5 360 max(data(:))];
+        %         bkgndFit = lsqnonlin(@(x) singleGaussianRotOffset(x,data,xIdx,yIdx,threshold),...
+        %             bkgndFit,lowerBound,upperBound);
+        %
+        %         sigma_x = bkgndFit(4);
+        %         sigma_y = bkgndFit(5);
+        %         theta = bkgndFit(6)*pi/180;
+        %         A = cos(theta)^2/2/sigma_x^2 + sin(theta)^2/2/sigma_y^2;
+        %         B = -sin(2*theta)/4/sigma_x^2 + sin(2*theta)/4/sigma_y^2 ;
+        %         C = sin(theta)^2/2/sigma_x^2 + cos(theta)^2/2/sigma_y^2;
+        %
+        %         bkgndImg = bkgndFit(1)*exp( -(A*(xIdx-bkgndFit(2)).^2 + 2*B*(xIdx-bkgndFit(2)).*(yIdx-bkgndFit(3)) + C*(yIdx-bkgndFit(3)).^2)) ...
+        %             +bkgndFit(7);
+        %         %imwrite(uint16(bkgndImg),[bkgndFile num2str(a) '.tif'],'tif');
+        %         bkgndFits(a,:) = [a bkgndFit];
         
         
         %% do fitting to extract exact locations of DH-PSFs
         %         meanData(a) = mean2(data(100:126,50:76))*conversionFactor;
-%         bkgndImg = 0;
-%         data = data - bkgndImg;
+        %         bkgndImg = 0;
+        %         data = data - bkgndImg;
         
         %         meanBGsubData(a) = mean2(data(100:126,50:76))*conversionFactor;
         %     imagesc(data,[0 200])
         %     drawnow
         %     pause(2)
-%         bkgndMean = 0;
+        %         bkgndMean = 0;
         
         % create reconstructed DH-PSF image from fitted data
         reconstructImg = zeros(imgHeight, imgWidth);
@@ -387,7 +387,10 @@ for stack = 1:length(dataFile)
                 maxPeakImg = max(maxPeakImg, peakImg);
                 
                 %threshold = mean(peakImg(:))+peakThreshold*std(peakImg(:));
-                peakImg(peakImg < peakThreshold(c)) = peakThreshold(c);
+                % These thresholds are defined relative to the single
+                % molecule thresholds.  This can become a problem, if the
+                % fiducial starts to bleach during the experiment.
+                peakImg(peakImg < 3*peakThreshold(stack,c)) = 3*peakThreshold(stack,c);
                 
                 if isreal(peakImg) && sum(sum(isnan(peakImg)))==0
                     temp = find(imregionalmax(peakImg));
@@ -416,39 +419,50 @@ for stack = 1:length(dataFile)
                     numPSFLocs = numPSFLocs+length(temp);
                 end
             end
+            PSFLocs = PSFLocs(PSFLocs(:,1)~=0,:);
             clear H dataFT peakImg
             
             %% filter out extraneous matches due to very strong signals
-         
+            
             if numPSFLocs > 0
-                % sort location matrix in decending order of confidence
-                temp = sortrows(PSFLocs(1:numPSFLocs,:),-4);
-                % copy most confident match to list of locations
-                PSFLocs(1,:) = temp(1,:);
-                numPSFLocs = 1;
-                for c=2:size(temp,1)
-                    % make sure that this candidate location is a minimum distance away
-                    % from all other candidate locations
-                    if sum((temp(c,1)-PSFLocs(1:numPSFLocs,1)).^2 + (temp(c,2)-PSFLocs(1:numPSFLocs,2)).^2 >= (10*minDistBetweenSMs)^2) == numPSFLocs
-                        % add it to list of locations
-                        numPSFLocs = numPSFLocs + 1;
-                        PSFLocs(numPSFLocs,:) = temp(c,:);
+                % keep only the matches that correspond to the
+                % user-selected coordinates
+                temp = [];
+                for c=1:size(PSFLocs,1)
+                    if (moleLocs(b,1)-PSFLocs(c,1))^2 +(moleLocs(b,2)-PSFLocs(c,2))^2 <= (minDistBetweenSMs)^2
+                        temp = [temp; PSFLocs(c,:)];
                     end
                 end
+                % sort location matrix in decending order of confidence
+                if size(temp,2)>0
+                    temp = sortrows(temp,-4);
+                    % copy most confident match
+                    PSFLocs = temp(1,:);
+                    %                 PSFLocs(1,:) = temp(1,:);
+                    numPSFLocs = 1;
+                else
+                    numPSFLocs = 0;
+                end
+                %                 temp = sortrows(PSFLocs(1:numPSFLocs,:),-4);
+                
+                
+                %                 for c=2:size(temp,1)
+                %                     % make sure that this candidate location is a minimum distance away
+                %                     % from all other candidate locations
+                %                     if sum((temp(c,1)-PSFLocs(1:numPSFLocs,1)).^2 + (temp(c,2)-PSFLocs(1:numPSFLocs,2)).^2 >= (10*minDistBetweenSMs)^2) == numPSFLocs
+                %                         % add it to list of locations
+                %                         numPSFLocs = numPSFLocs + 1;
+                %                         PSFLocs(numPSFLocs,:) = temp(c,:);
+                %                     end
+                %                 end
             end
             
-            %         totalPSFfits(numPSFfits+1:numPSFfits+numPSFLocs,1:6) = ...
-            %             [frames(a)*ones(numPSFLocs,1) (1:numPSFLocs)' PSFLocs(1:numPSFLocs,:)];
-            
-            % if numPSFLocs > 1, this will create a problem, because the
-            % code below is not executed.  TODO:  The definition of
-            % numPSFLocs needs to be made more robust and the logic
-            % statements should be modified.
-            
-            if numPSFLocs == 1
+            if numPSFLocs > 0
                 % create indices to use for fitting
-                [xIdx yIdx] = meshgrid(moleLocs(b,1)-boxRadius:moleLocs(b,1)+boxRadius, ...
-                    moleLocs(b,2)-boxRadius:moleLocs(b,2)+boxRadius);
+                % To allow for sample drift increase the box size for
+                % fitting by 2 pixels
+                [xIdx yIdx] = meshgrid(moleLocs(b,1)-(boxRadius+2):moleLocs(b,1)+(boxRadius+2), ...
+                    moleLocs(b,2)-(boxRadius+2):moleLocs(b,2)+(boxRadius+2));
                 % make sure indices are inside image
                 if min(xIdx(:)) < 1
                     xIdx = xIdx + (1-min(xIdx(:)));
@@ -521,10 +535,14 @@ for stack = 1:length(dataFile)
                 % compute initial parameters from the location of two spots in
                 % the templates
                 % [amp1 amp2 xMean1 yMean1 xMean2 yMean2 sigma1 sigma2]
-                fitParam(3) = PSFLocs(b,1) + templateLocs(PSFLocs(b,3),1)-(templateSize/2+0.5);
-                fitParam(4) = PSFLocs(b,2) + templateLocs(PSFLocs(b,3),2)-(templateSize/2+0.5);
-                fitParam(5) = PSFLocs(b,1) + templateLocs(PSFLocs(b,3),3)-(templateSize/2+0.5);
-                fitParam(6) = PSFLocs(b,2) + templateLocs(PSFLocs(b,3),4)-(templateSize/2+0.5);
+                fitParam(3) = PSFLocs(1) + templateLocs(PSFLocs(3),1)-(templateSize/2+0.5);
+                fitParam(4) = PSFLocs(2) + templateLocs(PSFLocs(3),2)-(templateSize/2+0.5);
+                fitParam(5) = PSFLocs(1) + templateLocs(PSFLocs(3),3)-(templateSize/2+0.5);
+                fitParam(6) = PSFLocs(2) + templateLocs(PSFLocs(3),4)-(templateSize/2+0.5);
+                %                 fitParam(3) = PSFLocs(b,1) + templateLocs(PSFLocs(b,3),1)-(templateSize/2+0.5);
+                %                 fitParam(4) = PSFLocs(b,2) + templateLocs(PSFLocs(b,3),2)-(templateSize/2+0.5);
+                %                 fitParam(5) = PSFLocs(b,1) + templateLocs(PSFLocs(b,3),3)-(templateSize/2+0.5);
+                %                 fitParam(6) = PSFLocs(b,2) + templateLocs(PSFLocs(b,3),4)-(templateSize/2+0.5);
                 % make sure initial guess lies within the ROI: if not, move on
                 if fitParam(3)<min(xIdx(:)) || fitParam(5)<min(xIdx(:)) ...
                         || fitParam(3)>max(xIdx(:)) || fitParam(5)>max(xIdx(:)) ...
@@ -630,10 +648,10 @@ for stack = 1:length(dataFile)
                     if ampRatio > ampRatioLimit;
                         PSFfits(rowIdx,13) = -1006;
                     end
-%                     if PSFfits(rowIdx,12)*conversionFactor/PSFfits(rowIdx,12) > 3.0  || ...
-%                             PSFfits(rowIdx,12)*conversionFactor/PSFfits(rowIdx,12) < 0.0
-%                         PSFfits(rowIdx,13) = -1007;
-%                     end
+                    %                     if PSFfits(rowIdx,12)*conversionFactor/PSFfits(rowIdx,12) > 3.0  || ...
+                    %                             PSFfits(rowIdx,12)*conversionFactor/PSFfits(rowIdx,12) < 0.0
+                    %                         PSFfits(rowIdx,13) = -1007;
+                    %                     end
                     
                 end
                 
@@ -663,7 +681,7 @@ for stack = 1:length(dataFile)
         title('Image reconstructed from fitted matches');
         
         drawnow;
-
+        
     end
     elapsedTime = toc(startTime);
     clear data dataFileInfo residual dataAvg reconstructImg xIdx yIdx temp;
@@ -679,19 +697,19 @@ for stack = 1:length(dataFile)
     
     %% Output raw fit data
     
-%     textHeader = {'frame number' 'molecule number' ...
-%         'amp 1 (counts)' 'amp 2 (counts)' 'x mean 1 (px)' 'y mean 1 (px)' ...
-%         'x mean 2 (px)' 'y mean 2 (px)' 'sigma 1 (px)' 'sigma 2 (px)' 'background mean (counts)' ...
-%         'total fit error (counts)' 'good fit flag' 'x center (nm)' 'y center (nm)' ...
-%         'angle (deg)' 'number of photons' 'interlobe distance' 'amplitude ratio' 'sigma ratio' 'aberration corrected x location (nm)' ...
-%         'aberration corrected y location (nm)' 'z location (nm)'};
+    %     textHeader = {'frame number' 'molecule number' ...
+    %         'amp 1 (counts)' 'amp 2 (counts)' 'x mean 1 (px)' 'y mean 1 (px)' ...
+    %         'x mean 2 (px)' 'y mean 2 (px)' 'sigma 1 (px)' 'sigma 2 (px)' 'background mean (counts)' ...
+    %         'total fit error (counts)' 'good fit flag' 'x center (nm)' 'y center (nm)' ...
+    %         'angle (deg)' 'number of photons' 'interlobe distance' 'amplitude ratio' 'sigma ratio' 'aberration corrected x location (nm)' ...
+    %         'aberration corrected y location (nm)' 'z location (nm)'};
     % save fit info to MATLAB mat file
     save([outputFilePrefix{stack} 'raw fits.mat']);
-%     % write fitted data to Excel spreadsheet
-%     xlswrite([outputFilePrefix{stack} 'raw fits.xlsx'], [textHeader; num2cell(PSFfits)], 'PSF fits');
-%     xlswrite([outputFilePrefix{stack} 'raw fits.xlsx'], {'Data filename:' [dataPath dataFile{stack}]; ...
-%         'Dark count filename:' darkFile; ...
-%         'Background region of interest' mat2str(ROI)}, 'fitting settings');
+    %     % write fitted data to Excel spreadsheet
+    %     xlswrite([outputFilePrefix{stack} 'raw fits.xlsx'], [textHeader; num2cell(PSFfits)], 'PSF fits');
+    %     xlswrite([outputFilePrefix{stack} 'raw fits.xlsx'], {'Data filename:' [dataPath dataFile{stack}]; ...
+    %         'Dark count filename:' darkFile; ...
+    %         'Background region of interest' mat2str(ROI)}, 'fitting settings');
     
     
     %% compute movement of fiduciaries
@@ -706,8 +724,8 @@ for stack = 1:length(dataFile)
     avgDevZ = zeros(numFrames,1);
     numValidFits = zeros(numFrames,1);
     
-%     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
-%         'deviation in z (nm)' 'good fit flag' 'number of photons'};
+    %     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
+    %         'deviation in z (nm)' 'good fit flag' 'number of photons'};
     
     syncFrames = zeros(1,numSyncFrames);
     lastGoodFrame = numFrames;
@@ -772,10 +790,10 @@ for stack = 1:length(dataFile)
         print(hDevs,'-djpeg',[outputFilePrefix{stack} 'fiduciary ' num2str(molecule) ' stats.jpg']);
         
         % write fiduciary data to Excel spreadsheet
-%         xlswrite([outputFilePrefix{stack} 'fiduciary deviations.xlsx'], ...
-%             [textHeader; num2cell([(1:numFrames)' devX(:,molecule) devY(:,molecule) ...
-%             devZ(:,molecule) goodFitFlag(:,molecule) numPhotons(:,molecule)])], ...
-%             ['fiduciary ' num2str(molecule)]);
+        %         xlswrite([outputFilePrefix{stack} 'fiduciary deviations.xlsx'], ...
+        %             [textHeader; num2cell([(1:numFrames)' devX(:,molecule) devY(:,molecule) ...
+        %             devZ(:,molecule) goodFitFlag(:,molecule) numPhotons(:,molecule)])], ...
+        %             ['fiduciary ' num2str(molecule)]);
         
         % if particle was fit successfully, add its movement to the average
         avgDevX = avgDevX + (goodFit & goodFitX).*devX(:,molecule);
@@ -789,36 +807,36 @@ for stack = 1:length(dataFile)
     avgDevY = avgDevY./numValidFits;
     avgDevZ = avgDevZ./numValidFits;
     
-%     figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
-%     subplot(2,1,1);
-%     plot(avgDevX,'r');
-%     hold on;
-%     plot(avgDevY,'b');
-%     axis tight;
-%     legend('x','y');
-%     title('Average of all fiduciaries');
-%     xlabel('Frame #');
-%     ylabel('Position (nm)');
-%     
-%     subplot(2,1,2);
-%     plot(avgDevZ,'k');
-%     axis tight;
-%     legend('z');
-%     title('Average of all fiduciaries');
-%     xlabel('Frame #');
-%     ylabel('Position (nm)');
-%     print('-djpeg',[outputFilePrefix{stack} 'average of all fid stats.jpg']);
+    %     figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
+    %     subplot(2,1,1);
+    %     plot(avgDevX,'r');
+    %     hold on;
+    %     plot(avgDevY,'b');
+    %     axis tight;
+    %     legend('x','y');
+    %     title('Average of all fiduciaries');
+    %     xlabel('Frame #');
+    %     ylabel('Position (nm)');
+    %
+    %     subplot(2,1,2);
+    %     plot(avgDevZ,'k');
+    %     axis tight;
+    %     legend('z');
+    %     title('Average of all fiduciaries');
+    %     xlabel('Frame #');
+    %     ylabel('Position (nm)');
+    %     print('-djpeg',[outputFilePrefix{stack} 'average of all fid stats.jpg']);
     
     % output fiduciary correction data
     save([outputFilePrefix{stack} 'fiduciary corrections.mat'],'avgDevX','avgDevY',...
         'avgDevZ','numValidFits','devX','devY','devZ','goodFitFlag','numPhotons');
     
     % output fiduciary correction data to Excel spreadsheet
-%     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
-%         'deviation in z (nm)' 'number of valid fiduciaries in average'};
-%     xlswrite([outputFilePrefix{stack} 'fiduciary deviations.xlsx'], ...
-%         [textHeader; num2cell([(1:numFrames)' avgDevX avgDevY avgDevZ ...
-%         numValidFits])], 'average fiduciary deviations');
+    %     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
+    %         'deviation in z (nm)' 'number of valid fiduciaries in average'};
+    %     xlswrite([outputFilePrefix{stack} 'fiduciary deviations.xlsx'], ...
+    %         [textHeader; num2cell([(1:numFrames)' avgDevX avgDevY avgDevZ ...
+    %         numValidFits])], 'average fiduciary deviations');
     
     
     

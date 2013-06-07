@@ -61,7 +61,7 @@ scatterSize = 30; %str2double(inputdialog{2});
 wlShiftX = 0; %str2double(inputdialog{3});
 wlShiftY = 0; %str2double(inputdialog{4});
 % powerAtObjective = str2double(inputdialog{5})/1000;
-    if isnan(catPSFfits(1,30))
+    if sum(isnan(catPSFfits(:,30))) == size(catPSFfits,1)
         warning(['No fiducial correction applied!']);
     end
 
@@ -360,7 +360,7 @@ while anotherpass == true
     if sum(goodFits) < 5
         warning('Very few (<5) fits passed the filters. Double-check limits.');
     end
-    if ~isnan(catPSFfits(1,30))
+    if sum(isnan(catPSFfits(:,30))) ~= size(catPSFfits,1)
 %         goodFits = goodFits & zFidCorrected >= zRange(1) & zFidCorrected <= zRange(2);
 %         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
 %         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
@@ -413,6 +413,7 @@ while anotherpass == true
     ylim([min(yLoc(:))-500 max(yLoc(:))+500]);
     xlabel('x (nm)');ylabel('y (nm)');
     axis ij;
+    axis square;
     
     if pass == 1
         ROI = imrect(gca,[min(xLoc(:)) min(yLoc(:)) max(xLoc(:))-min(xLoc(:)) max(yLoc(:))-min(yLoc(:))]);
