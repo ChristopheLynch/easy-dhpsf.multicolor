@@ -1,38 +1,38 @@
 % Copyright (c)2013, The Board of Trustees of The Leland Stanford Junior
 % University. All rights reserved.
-% 
-% Redistribution and use in source and binary forms, with or without 
-% modification, are permitted provided that the following conditions are 
+%
+% Redistribution and use in source and binary forms, with or without
+% modification, are permitted provided that the following conditions are
 % met:
-% 
-% Redistributions of source code must retain the above copyright notice, 
+%
+% Redistributions of source code must retain the above copyright notice,
 % this list of conditions and the following disclaimer.
-% Redistributions in binary form must reproduce the above copyright notice, 
-% this list of conditions and the following disclaimer in the documentation 
+% Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation
 % and/or other materials provided with the distribution.
-% Neither the name of the Leland Stanford Junior University nor the names 
-% of its contributors may be used to endorse or promote products derived 
+% Neither the name of the Leland Stanford Junior University nor the names
+% of its contributors may be used to endorse or promote products derived
 % from this software without specific prior written permission.
-% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
 % IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-% PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
-% PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-% PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
-% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+% PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+% PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+% PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function [outputFilePrefix] = ...
     f_fitSMs(dataFile,dataPath,calFile,calBeadIdx,templateFile,templateFrames,peakThreshold,...
     darkFile,logFile,logPath,boxRadius,channel, sigmaBounds,gaussianFilterSigma,minDistBetweenSMs,...
     lobeDistBounds,conversionGain,nmPerPixel,EMGain,templateLocs,ROI)
-% f_fitSMs is a module in easy_dhpsf that finds the positions of likely 
-% DH-PSF profiles by matching to a series of templates generated in 
-% f_calDHPSF and prepared in f_calSMidentification. These are then more 
-% precisely localized using a double gaussian fit and corrected for drift 
+% f_fitSMs is a module in easy_dhpsf that finds the positions of likely
+% DH-PSF profiles by matching to a series of templates generated in
+% f_calDHPSF and prepared in f_calSMidentification. These are then more
+% precisely localized using a double gaussian fit and corrected for drift
 % using the results from f_trackFiducials.
 
 printOutputFrames = 0;
@@ -84,7 +84,7 @@ def = {};
 prompt = {};
 
 %%%%%%%%%%%%%%%%
-def = {'No'};
+def = {'Yes'};
 prompt = {'Do you want to estimate the laser profile?'};
 %%%%%%%%%%%%%%%% this comment and the one below can be uncommented to allow
 %%%%%%%%%%%%%%%% selection of specific frames: however, this is *slow*
@@ -94,7 +94,7 @@ prompt = {'Do you want to estimate the laser profile?'};
 % numFramesAll = zeros(length(selectedFiles),1);
 % def = cell(length(selectedFiles)+1,1);
 % prompt = cell(length(selectedFiles)+1,1);
-% 
+%
 % for i = 1:length(selectedFiles)
 %     fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
 %     numFramesAll(i) = length(fileInfoAll{i});
@@ -103,54 +103,54 @@ prompt = {'Do you want to estimate the laser profile?'};
 % end
 %     def{end} = 'No';
 %     prompt{end} = 'Do you want to estimate the laser profile?';
-    
+
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-    %%%%%%%%%%%%%%%%** this must be uncommented if selecting frames **
-    % for i = 1:length(selectedFiles)
-    %     framesAll{i} = str2num(inputdialog{i});
-    % end
-    findLaserInt = strcmp(inputdialog{end},'Yes');
-    
-    % This information should be passed from the earlier execution of
-    % this code in f_calSMidentification, but we get another chance to
-    % select it if it wasn't specified
-    if isequal(logFile,0)
-        [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
-            'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
-            'MultiSelect', 'on');
-        if isequal(logPath,0)
-            logFile = 'not specified';
-        end
-        if ischar(logFile)
-            logFile = cellstr(logFile);
-        end
-        % sets absolute frame number for relating data to sequence log
-        absFrameNum = 1;
+%%%%%%%%%%%%%%%%** this must be uncommented if selecting frames **
+% for i = 1:length(selectedFiles)
+%     framesAll{i} = str2num(inputdialog{i});
+% end
+findLaserInt = strcmp(inputdialog{end},'Yes');
+
+% This information should be passed from the earlier execution of
+% this code in f_calSMidentification, but we get another chance to
+% select it if it wasn't specified
+if isequal(logFile,0)
+    [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
+        'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
+        'MultiSelect', 'on');
+    if isequal(logPath,0)
+        logFile = 'not specified';
     end
-    
-    dlg_title = 'Filtering control points?';
-    prompt = {  'If control points: how many stationary frames for each position? (Cancel if not CP)',...
-            };
-    def = {    '20', ... 
-            };
-    num_lines = 1;
-    inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-    if ~isempty(inputdialog)
-        maxNumMeasurement = str2double(inputdialog{1});
-        filterCPs = true;
-    else
-        filterCPs = false;
+    if ischar(logFile)
+        logFile = cellstr(logFile);
     end
-    
+end
+% sets absolute frame number for relating data to sequence log
+absFrameNum = 1;
+
+dlg_title = 'Filtering control points?';
+prompt = {  'If control points: how many stationary frames for each position? (Cancel if not CP)',...
+    };
+def = {    '20', ...
+    };
+num_lines = 1;
+inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+if ~isempty(inputdialog)
+    maxNumMeasurement = str2double(inputdialog{1});
+    filterCPs = true;
+else
+    filterCPs = false;
+end
+
 %% begin fitting loop over files
 for stack = selectedFiles % = 1:length(dataFile)
     
     %%% this is an efficient way to set these variables if frames were
     %%% selected above
-%     fileIdx = find(selectedFiles == stack); 
-%     fileInfo = fileInfoAll{fileIdx};
-%     frames = framesAll{fileIdx};
-%     numFrames = numFramesAll(fileIdx);
+    %     fileIdx = find(selectedFiles == stack);
+    %     fileInfo = fileInfoAll{fileIdx};
+    %     frames = framesAll{fileIdx};
+    %     numFrames = numFramesAll(fileIdx);
     
     %%% these variables must be set this way if frames were not selected
     fileInfo = imfinfo([dataPath dataFile{stack}]);
@@ -163,7 +163,7 @@ for stack = selectedFiles % = 1:length(dataFile)
     % saves in labeled directory if a channel is selected
     if channel == '0'
         outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\molecule fits  ' ...
-        datestr(now,'yyyymmdd HHMM') '\'];
+            datestr(now,'yyyymmdd HHMM') '\'];
     else
         outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\' channel(1) ' molecule fits  ' ...
             datestr(now,'yyyymmdd HHMM') '\'];
@@ -194,13 +194,13 @@ for stack = selectedFiles % = 1:length(dataFile)
         
         % Compute average image
         
-%         avgImg = zeros(imgHeight,imgWidth);
-%         for a = 1:200
-%             avgImg = avgImg + double(imread([dataPath dataFile{stack}],a,'Info',fileInfo)) - darkAvg;
-%             %    avgImg = avgImg + double(imread([dataPath dataFile],a)) - darkAvg;
-%             %Deleted 'Info' -AC 6/21
-%         end
-%         avgImg = avgImg/200;
+        %         avgImg = zeros(imgHeight,imgWidth);
+        %         for a = 1:200
+        %             avgImg = avgImg + double(imread([dataPath dataFile{stack}],a,'Info',fileInfo)) - darkAvg;
+        %             %    avgImg = avgImg + double(imread([dataPath dataFile],a)) - darkAvg;
+        %             %Deleted 'Info' -AC 6/21
+        %         end
+        %         avgImg = avgImg/200;
         
         %define variables related to the templates
         if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
@@ -213,7 +213,7 @@ for stack = selectedFiles % = 1:length(dataFile)
             load(templateFile);
             templateSize = size(template,2);
         end
-        numTemplates = length(templateFrames); 
+        numTemplates = length(templateFrames);
         templateColors = jet(numTemplates);
         
         % make sure ROI is an even number of pixels: should also be done in
@@ -231,9 +231,9 @@ for stack = selectedFiles % = 1:length(dataFile)
         
         if findLaserInt
             temp = inputdlg({'What was the laser power at the objective? (in mW)'},...
-                 'Input laser power',...
-                 1,...
-                 {'0'});    
+                'Input laser power',...
+                1,...
+                {'0'});
             powerAtObjective = str2double(temp{1})/1000;
         end
         
@@ -297,32 +297,33 @@ for stack = selectedFiles % = 1:length(dataFile)
             sifLogData = sifLogData(absFrameNum:absFrameNum+numFrames-1,:);
             absFrameNum = absFrameNum + numFrames;
         end
-    %%% Option 1: Select only stationary steps (for CP)
-    % works by selecting periods between the '-1' markers that signify motion
-    % if the length of the period != step dwell time (i.e., = translation period), skip
-    % 
-    motionFrames = find(sifLogData(:,1)==-1);  % This finds -1 entries in the shutters correspoding to moving frames
-    validPeriod = diff(motionFrames)==maxNumMeasurement+1;
-    validFrames = [];
-    validMotionFrames = motionFrames(validPeriod);
-    
-    for i = 1:length(validMotionFrames)
-        initFrame = validMotionFrames(i);
-        temp = (initFrame+3:initFrame+maxNumMeasurement)';
-        validFrames = [validFrames; temp];
-    end
-        frames = intersect(validFrames,frames);
-    %%% Option 2: Select only frames that are illuminated (SMACM 2-color)
-        if channel == 'g' && ~filterCPs   % use an intersect in case frames are limited by user
-            frames = intersect(find(sifLogData(:,2) == 1),frames);
-        elseif channel == 'r' && ~filterCPs
-            frames = intersect(find(sifLogData(:,3) == 1),frames);
+        if filterCPs   %%% Option 1: Select only stationary steps (for CP)
+            % works by selecting periods between the '-1' markers that signify motion
+            % if the length of the period != step dwell time (i.e., = translation period), skip
+            %
+            motionFrames = find(sifLogData(:,1)==-1);  % This finds -1 entries in the shutters correspoding to moving frames
+            validPeriod = diff(motionFrames)==maxNumMeasurement+1;
+            validFrames = [];
+            validMotionFrames = motionFrames(validPeriod);
+            
+            for i = 1:length(validMotionFrames)
+                initFrame = validMotionFrames(i);
+                temp = (initFrame+3:initFrame+maxNumMeasurement)';
+                validFrames = [validFrames; temp];
+            end
+            frames = intersect(validFrames,frames);
+        else   %%% Option 2: Select only frames that are illuminated (SMACM 2-color)
+            if channel == 'g' %&& ~filterCPs   % use an intersect in case frames are limited by user
+                frames = intersect(find(sifLogData(:,2) == 1),frames);
+            elseif channel == 'r' %&& ~filterCPs
+                frames = intersect(find(sifLogData(:,3) == 1),frames);
+            end
         end
     end
     
     %% do template matching
     
-
+    
     hSMFits=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
     totalPSFfits = zeros(20000, 6+18+3);
     numPSFfits = 0;
@@ -333,18 +334,18 @@ for stack = selectedFiles % = 1:length(dataFile)
     bkgndImg = zeros(length(ROI(2):ROI(2)+ROI(4)-1),...
         length(ROI(1):ROI(1)+ROI(3)-1));
     numbkgndImg = 0;
-
+    
     for c=frames
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
-
+        
         % subtract the background and continue
         bkgndImg_curr = f_waveletBackground(data);
         bkgndImg = bkgndImg + bkgndImg_curr;
         numbkgndImg = numbkgndImg +1;
         data = data - bkgndImg_curr;
-
+        
         dataFT = fft2(data,cropHeight,cropWidth);
         maxPeakImg = zeros(cropHeight,cropWidth);
         % matrix PSFLocs stores information about double helices that were
@@ -403,7 +404,7 @@ for stack = selectedFiles % = 1:length(dataFile)
             end
         end
         clear H dataFT peakImg
-     
+        
         %% filter out extraneous matches due to very strong signals
         
         if numPSFLocs > 0
@@ -425,7 +426,7 @@ for stack = selectedFiles % = 1:length(dataFile)
         
         totalPSFfits(numPSFfits+1:numPSFfits+numPSFLocs,1:6) = ...
             [c*ones(numPSFLocs,1) (1:numPSFLocs)' PSFLocs(1:numPSFLocs,:)];
-       
+        
         %% do fitting to extract exact locations of DH-PSFs
         
         % [amp1 amp2 xMean1 yMean1 xMean2 yMean2 sigma1 sigma2 bkgndMean
@@ -537,7 +538,7 @@ for stack = selectedFiles % = 1:length(dataFile)
             totalCounts = sum(sum(data(yIdx(:,1),xIdx(1,:))));
             %  PSFfits(b,15) = (totalCounts-(2*boxRadius+1)^2*bkgndMean)*conversionFactor;  % bkgndMean = 0
             PSFfits(b,15) = totalCounts*conversionFactor;  % bkgndMean = 0
-
+            
             %The interlobe distance
             lobeDist = sqrt((fitParam(3)-fitParam(5)).^2 + ...
                 (fitParam(4)-fitParam(6)).^2);
@@ -550,7 +551,7 @@ for stack = selectedFiles % = 1:length(dataFile)
             % Gaussian width Ratio
             sigmaRatio = abs(fitParam(7) - fitParam(8))/sum(fitParam(7:8));
             PSFfits(b,18) = sigmaRatio;
-    
+            
             %% Now evaluate the goodness of the fits
             
             % Conditions for fits (play with these):
@@ -606,7 +607,7 @@ for stack = selectedFiles % = 1:length(dataFile)
                     +fitParam(2).*exp( -((xIdx-fitParam(5)).^2+(yIdx-fitParam(6)).^2.) / (2.*fitParam(8).^2));
             end
         end
-
+        
         totalPSFfits(numPSFfits+1:numPSFfits+numPSFLocs,6+1:6+18) = PSFfits;
         numPSFfits = numPSFfits+numPSFLocs;
         
@@ -638,15 +639,15 @@ for stack = selectedFiles % = 1:length(dataFile)
             ['ROI [xmin ymin width height] = ' mat2str(ROI)]});
         
         subplot('Position',[0.125+2*.85/3 0.025 .85/3 .95]);
-%         imagesc(reconstructImg+bkgndMean,[min(data(:)) max(data(:))]);axis image;
+        %         imagesc(reconstructImg+bkgndMean,[min(data(:)) max(data(:))]);axis image;
         imagesc(reconstructImg,[min(data(:)) max(data(:))]);axis image;
         title({'Image reconstructed from fitted matches' ...
             [num2str(sum(PSFfits(:,11)>0)) ' successful fits']});
         
         drawnow;
         if printOutputFrames == 1
-        set(gcf,'PaperPositionMode','auto');
-        saveas(hSMFits, ['output images\frame ' num2str(c) '.tif']);
+            set(gcf,'PaperPositionMode','auto');
+            saveas(hSMFits, ['output images\frame ' num2str(c) '.tif']);
         end
     end
     elapsedTime = toc(startTime);
@@ -666,11 +667,11 @@ for stack = selectedFiles % = 1:length(dataFile)
     
     %% Measure the Gaussian Laser Intensity Distribution
     if findLaserInt == 1;
-    % This takes the average bkgndImg found using f_waveletBackground
-    % and tries to extract a Gaussian laser profile from it, assuming the
-    % background intensity is uniformly proportional to laser intensity
+        % This takes the average bkgndImg found using f_waveletBackground
+        % and tries to extract a Gaussian laser profile from it, assuming the
+        % background intensity is uniformly proportional to laser intensity
         bkgndImg_avg = bkgndImg/numbkgndImg;
-
+        
         [laser_x_nm, laser_y_nm ,sigma_x_nm, sigma_y_nm, theta, peakIntensity, waist]...
             = f_findGaussianLaserProfile...
             (bkgndImg_avg, FOVmask, nmPerPixel, powerAtObjective, ROI);
@@ -690,9 +691,9 @@ for stack = selectedFiles % = 1:length(dataFile)
         z(goodFit_forward),totalPSFfits(:,20),'spline');
     
     %% output data to external file
-   
+    
     save([outputFilePrefix{stack} 'molecule fits.mat']);
-
+    
     
 end
 end

@@ -32,9 +32,9 @@
 % directly
 function f_processFits(catPSFfits,numFrames,fitFilePrefix)
 useTimeColors = 0;
-numPhotonRange = [0 1000000];
+numPhotonRange = [300 10000];
 xyPrecRange = [0 100];
-zPrecRange = [0 100];
+zPrecRange = [0 150];
 numFramesAll = sum(numFrames);
 load([fitFilePrefix{1} 'molecule fits.mat']);
 
@@ -133,7 +133,7 @@ anotherpass = true;
 zRange = [-2000 2000];
 %if exist('numFramesAll');%TODO
 frameRange = [1 sum(numFramesAll)];
-fitErrorRange = [0 3];
+fitErrorRange = [0 4];
 
 while anotherpass == true
 
@@ -153,32 +153,55 @@ while anotherpass == true
         
         figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         subplot(2,2,1)
-        hist(catPSFfits(initGoodFits,lobeDistCol), 100)
+        [n,xout] = hist(catPSFfits(:,lobeDistCol), 4:0.1:12);
+        bar(xout,n)
+        hold on
+        [n,xout] = hist(catPSFfits(initGoodFits,lobeDistCol), 4:0.1:12);
+        bar(xout,n, 'green')
+%         [n,xout] = hist(catPSFfits(~initGoodFits,lobeDistCol), 4:0.1:12);
+%         bar(xout,n, 'red')
+        hold off
         xlabel('pixel'); ylabel('Frequency');
-        title('Unfiltered Lobe Distance');
+        title('Lobe Distance');
+        legend('unfiltered','initially included')
         xlim([4 14]);
         
         subplot(2,2,2)
+        unfilteredFitError = catPSFfits(:,fitErrorCol)*conversionFactor./catPSFfits(:,numPhotonCol);        
         fitError = catPSFfits(initGoodFits,fitErrorCol)*conversionFactor./catPSFfits(initGoodFits,numPhotonCol);
-        hist(fitError(fitError > 0 & fitError < 20), 100)
+        badFitError = catPSFfits(~initGoodFits,fitErrorCol)*conversionFactor./catPSFfits(~initGoodFits,numPhotonCol);
+        [n,xout] = hist(unfilteredFitError(unfilteredFitError > 0 & unfilteredFitError < 20), 0:0.1:10);
+        bar(xout,n)
+        hold on
+        [n,xout] = hist(fitError(fitError > 0 & fitError < 20), 0:0.1:10);
+        bar(xout,n, 'green')
+%         [n,xout] = hist(badFitError(badFitError > 0 & badFitError < 20), 0:0.1:10);
+%         bar(xout,n, 'red')
+        hold off
         xlabel('Fit Error'); ylabel('Frequency');
-        title('Unfiltered Fit Error');
+        title('Fit Error');
+        legend('unfiltered','initially included')
         xlim([0 8]);
         
         subplot(2,2,3)
         hist(catPSFfits(initGoodFits,ampRatioCol), 100)
+        [n,xout] = hist(catPSFfits(:,ampRatioCol), 0:0.01:1);
+        bar(xout,n)
+        hold on
+        [n,xout] = hist(catPSFfits(initGoodFits,ampRatioCol), 0:0.01:1);
+        bar(xout,n, 'green')
+        hold off
         xlabel('Amplitude Ratio'); ylabel('Frequency');
-        title('Unfiltered Amplitude Ratio');
+        title('Amplitude Ratio');
         xlim([-0.1 1]);
+        legend('unfiltered','initially included')
         
         subplot(2,2,4)
         hist(catPSFfits(initGoodFits,sigmaRatioCol), 100)
         xlabel('Sigma Ratio'); ylabel('Frequency');
-        title('Unfiltered Sigma Ratio');
+        title('Sigma Ratio');
         xlim([-0.1 1]);
-        
-        
-        
+
     end
     %% Chose a desired parameter set for reconstruction
     
@@ -562,7 +585,7 @@ while anotherpass == true
     
     if useTimeColors == 0
         % plot is faster than scatter
-        plot3(xLoc,yLoc,zLoc,'.','MarkerSize',scatterSize,...
+        plot3(xLoc,yLoc,zLoc,'.','MarkerSize',scatterSize/3,...
             'Color',[1 1 0]);
     %     scatter3(xLoc,yLoc,zLoc,scatterSize,[1 1 0],'filled');
     else
@@ -657,7 +680,7 @@ mkdir(savePath);
 if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
-        'wlShiftX', 'wlShiftY','goodFits','correctedBG');
+        'wlShiftX', 'wlShiftY','goodFits');
 end
 %%
 % output excel spreadsheet
