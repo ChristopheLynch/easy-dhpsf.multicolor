@@ -390,10 +390,11 @@ while anotherpass == true
     if sum(goodFits) < 5
         warning('Very few (<5) fits passed the filters. Double-check limits.');
     end
-    if sum(isnan(catPSFfits(:,30))) ~= size(catPSFfits,1)
     % corrects zRange for index mismatch (see below for the inverse
     % transformation to the z position)
     corrzRange = zRange * nOil/nSample;
+    
+    if sum(isnan(catPSFfits(:,30))) ~= size(catPSFfits,1)
 %         goodFits = goodFits & zFidCorrected >= zRange(1) & zFidCorrected <= zRange(2);
 %         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
 %         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
