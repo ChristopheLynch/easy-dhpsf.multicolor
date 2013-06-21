@@ -1,6 +1,12 @@
 function [] = Identify_ControlPoints_3D_v1()
 % This function pairs up corresponding localization in the two channels 
 
+% Key outputs:
+% 'matched_cp_reflected' and 'matched_cp_transmitted'
+%
+% [N/A,N/A,frameStart,frameEnd,meanX,meanY,meanZ,...
+% stdX,stdY,stdZ,meanPhotons,numMeasurements,N/A]
+
 % Instrument specific parameters
 nmPerPixel = 125.78;
 roiSize = 270;
@@ -15,6 +21,7 @@ if isequal(reflectedFile,0)
 end
 load([reflectedPath reflectedFile]);
 totalPSFfits_reflected = [frameNum, xLoc, yLoc, zLoc, sigmaX, sigmaY, sigmaZ, numPhotons meanBkgnd];
+clear frameNum xLoc yLoc zLoc sigmaX sigmaY sigmaZ numPhotons meanBkgnd
 
 [transmittedFile transmittedPath] = uigetfile({'*.mat';'*.*'},'Open data file with raw molecule fits in transmitted channel');
 if isequal(transmittedFile,0)
@@ -153,6 +160,7 @@ matlabpool close
 cpSteps = unique(Locs_transmitted(:,1));
 [ matched_cp_reflected, matched_cp_transmitted, matchedCP ] = nearestFitCP_3D(...
     Locs_reflected, Locs_transmitted, cpSteps, tform );
+
 
 matched_cp_reflected = sortrows(matched_cp_reflected,13);
 matched_cp_transmitted = sortrows(matched_cp_transmitted,13);
@@ -679,7 +687,7 @@ yCenterCol = 3;
 
 % do channel 1
 [numMatch,dim] = size(cp_channel1_approx);
-cp_channel1 = zeros(numMatch);
+cp_channel1 = zeros(numMatch,dim);
 
 for i=1:numMatch
     frameFits1 = c1_allfits((c1_allfits(:,frameCol) == selectedFrame(i)),:);
@@ -692,7 +700,7 @@ end
 
 % do channel 2
 [numMatch,dim] = size(cp_channel2_approx);
-cp_channel2 = zeros(numMatch);
+cp_channel2 = zeros(numMatch,dim);
 
 for i=1:numMatch
     frameFits2 = c2_allfits((c2_allfits(:,frameCol) == selectedFrame(i)),:);
