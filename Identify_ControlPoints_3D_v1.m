@@ -422,8 +422,8 @@ xlabel('Distance (nm)');
 ylabel('Frequency');
 title('Y Localization Precision');
 subplot(2,4,3)
-hist(Locs_reflected(:,10),300)
-xlim([0 10])
+hist(Locs_reflected(:,10),2400)
+xlim([0 20])
 xlabel('Distance (nm)');
 ylabel('Frequency');
 title('Z Localization Precision');
@@ -447,8 +447,8 @@ xlabel('Distance (nm)');
 ylabel('Frequency');
 title('Y Localization Precision');
 subplot(2,4,7)
-hist(Locs_transmitted(:,10),300)
-xlim([0 10])
+hist(Locs_transmitted(:,10),2400)
+xlim([0 20])
 xlabel('Distance (nm)');
 ylabel('Frequency');
 title('Z Localization Precision');
@@ -679,7 +679,7 @@ yCenterCol = 3;
 
 % do channel 1
 [numMatch,dim] = size(cp_channel1_approx);
-cp_channel1 = zeros(size(cp_channel1_approx));
+cp_channel1 = zeros(numMatch);
 
 for i=1:numMatch
     frameFits1 = c1_allfits((c1_allfits(:,frameCol) == selectedFrame(i)),:);
@@ -692,7 +692,7 @@ end
 
 % do channel 2
 [numMatch,dim] = size(cp_channel2_approx);
-cp_channel2 = zeros(size(cp_channel2_approx));
+cp_channel2 = zeros(numMatch);
 
 for i=1:numMatch
     frameFits2 = c2_allfits((c2_allfits(:,frameCol) == selectedFrame(i)),:);
