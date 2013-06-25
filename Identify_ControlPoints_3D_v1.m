@@ -178,24 +178,27 @@ function [ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasuremen
 %% Ask for user input
 dlg_title = 'Please Input Parameters';
 prompt = {  'How many stationary frames for each position?',...
+            'What frame do you want to start the averaging?'...
         };
 def = {    '20', ... 
+           '3'...
         };
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 maxNumMeasurement = str2double(inputdialog{1});
+frameAvgStart = str2double(inputdialog{2});
 
 %% Analize sif log file
 sifLogData =  importdata([logPath logFile]);
-motionFrames = find(sifLogData(:,1)==-1);               % This finds -1 entries in the shutters correspoding to moving frames
+motionFrames = find(sifLogData(:,1)==-1);   % This finds -1 entries in the shutters correspoding to moving frames
 validPeriod = diff(motionFrames)==maxNumMeasurement+1;
-validFrames = [];
 validMotionFrames = motionFrames(validPeriod);
+validFrames = zeros(length(validMotionFrames),1);
 
 for i = 1:length(validMotionFrames)
-    frame = validMotionFrames(i);
-    temp = (frame+3:frame+maxNumMeasurement)';
-    %temp = (frame+13:frame+maxNumMeasurement)'; % # frames = 21 - '+#'
+    frame = validMotionFrames(i); % the frame during which movement occurs
+    temp = (frame+frameAvgStart:frame+maxNumMeasurement)';
+    %temp = (frame+3:frame+maxNumMeasurement)';
     validFrames = [validFrames; temp];
 end
 
@@ -439,21 +442,40 @@ for i = 1:length(transitionFrames)
     
 end
 
-fullLengthR = Locs_reflected(:,12) >= 8;
-fullLengthT = Locs_transmitted(:,12) >= 8;
-
+%% Generate diagnostic figures to assess equilibration time of objective
+% % what z positions give various shifts?
+% shiftTPos = windowDiffTrans(:,3) < 0;
+% shiftRPos = windowDiffRef(:,3) < 0;
+% 
+% figure;
+% subplot(1,2,1)
+% hist(Locs_reflected(shiftRPos,7),40);
+% xlabel('z position'); ylabel('counts'); 
+% title('z positions giving shifts < 0 nm for ref channel');
+% 
+% subplot(1,2,2)
+% hist(Locs_transmitted(shiftTPos,7),40);
+% xlabel('z position'); ylabel('counts'); 
+% title('z positions giving shifts < 0 nm for trans channel');
+% 
+% % what is full distribution of shifts? use CP that fill whole avg window
+% fullLengthR = Locs_reflected(:,12) >= 15;
+% fullLengthT = Locs_transmitted(:,12) >= 15;
+% 
 % figure;
 % subplot(1,2,1);
-% hist(windowDiffRef(fullLengthR,3),150);
+% hist(windowDiffRef(fullLengthR,3),(max(windowDiffRef(fullLengthR,3))-min(windowDiffRef(fullLengthR,3)))/4);
 % xlabel('z shift from begin to end frame (nm)');
 % ylabel('counts');
 % title('distribution of full-window diffs for reflected channel');
+% xlim([-100 100]);
 % 
 % subplot(1,2,2);
-% hist(windowDiffTrans(fullLengthT,3),150);
+% hist(windowDiffTrans(fullLengthT,3),(max(windowDiffTrans(fullLengthT,3))-min(windowDiffTrans(fullLengthT,3)))/4);
 % xlabel('z shift from begin to end frame (nm)');
 % ylabel('counts');
 % title('distribution of full-window diffs for trans channel');
+% xlim([-100 100]);
 
 %% Ask for user input
 
