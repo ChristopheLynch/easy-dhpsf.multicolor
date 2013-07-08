@@ -394,6 +394,7 @@ while anotherpass == true
     % corrects zRange for index mismatch (see below for the inverse
     % transformation to the z position)
     corrzRange = zRange * nOil/nSample;
+    
     if sum(isnan(catPSFfits(:,30))) ~= size(catPSFfits,1)
         goodFits = goodFits & catPSFfits(:,30) >= corrzRange(1) & catPSFfits(:,30) <= corrzRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
