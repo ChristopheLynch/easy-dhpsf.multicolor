@@ -149,8 +149,8 @@ while anotherpass == true
                 'Info', whiteLightInfo));
         end
         % resize white light to the size of the ROI of the single molecule fits
-%         ROI_initial = [1, 1, 270, 270];
-        ROI_initial = [1, 1, 200, 200];
+        ROI_initial = [1, 1, 270, 270];
+%         ROI_initial = [1, 1, 200, 200];
         whiteLight = whiteLight(ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1,ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1);
         % rescale white light image to vary from 0 to 1
         whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
@@ -396,7 +396,7 @@ end
 [saveFile, savePath] = uiputfile({'*.mat';'*.*'},'Enter a filename to save this ROI. Otherwise, click cancel.');
 if ~isequal(saveFile,0)
     save([savePath saveFile(1:length(saveFile)-4) '_multicolorSMACM.mat'],'croppedDataSets','yLoc','LocFiles','ROI','dataSets','tformFile','tformPath','validPoints',...
-        'whiteLightFile','whiteLightPath','whiteLight','wlShiftX','wlShiftY');
+        'whiteLightFile','whiteLightPath','whiteLight','wlShiftX','wlShiftY', 'tform');
 end
 %%
 % % output excel spreadsheet

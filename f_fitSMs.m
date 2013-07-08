@@ -84,31 +84,31 @@ def = {};
 prompt = {};
 
 %%%%%%%%%%%%%%%%
-def = {'Yes'};
-prompt = {'Do you want to estimate the laser profile?'};
-%%%%%%%%%%%%%%%% this comment and the one below can be uncommented to allow
-%%%%%%%%%%%%%%%% selection of specific frames: however, this is *slow*
-% % populates 'fileInfo' and 'numFrames' for all files, and generates the
-% % fields for the frame selection dlg
-% fileInfoAll=cell(length(selectedFiles),1);
-% numFramesAll = zeros(length(selectedFiles),1);
-% def = cell(length(selectedFiles)+1,1);
-% prompt = cell(length(selectedFiles)+1,1);
-%
-% for i = 1:length(selectedFiles)
-%     fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
-%     numFramesAll(i) = length(fileInfoAll{i});
-%     def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
-%     prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
-% end
-%     def{end} = 'No';
-%     prompt{end} = 'Do you want to estimate the laser profile?';
+% def = {'Yes'};
+% prompt = {'Do you want to estimate the laser profile?'};
+%%%%%%%%%%%%%%% this comment and the one below can be uncommented to allow
+%%%%%%%%%%%%%%% selection of specific frames: however, this is *slow*
+% populates 'fileInfo' and 'numFrames' for all files, and generates the
+% fields for the frame selection dlg
+fileInfoAll=cell(length(selectedFiles),1);
+numFramesAll = zeros(length(selectedFiles),1);
+def = cell(length(selectedFiles)+1,1);
+prompt = cell(length(selectedFiles)+1,1);
+
+for i = 1:length(selectedFiles)
+    fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
+    numFramesAll(i) = length(fileInfoAll{i});
+    def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
+    prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
+end
+    def{end} = 'No';
+    prompt{end} = 'Do you want to estimate the laser profile?';
 
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-%%%%%%%%%%%%%%%%** this must be uncommented if selecting frames **
-% for i = 1:length(selectedFiles)
-%     framesAll{i} = str2num(inputdialog{i});
-% end
+%%%%%%%%%%%%%%%** this must be uncommented if selecting frames **
+for i = 1:length(selectedFiles)
+    framesAll{i} = str2num(inputdialog{i});
+end
 findLaserInt = strcmp(inputdialog{end},'Yes');
 
 % This information should be passed from the earlier execution of

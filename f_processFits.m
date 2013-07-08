@@ -38,6 +38,7 @@ zPrecRange = [0 150];
 numFramesAll = sum(numFrames);
 load([fitFilePrefix{1} 'molecule fits.mat']);
 
+
 % Parameters
 
 % dlg_title = 'Please Input Parameters';
@@ -390,18 +391,10 @@ while anotherpass == true
     if sum(goodFits) < 5
         warning('Very few (<5) fits passed the filters. Double-check limits.');
     end
-    if sum(isnan(catPSFfits(:,30))) ~= size(catPSFfits,1)
     % corrects zRange for index mismatch (see below for the inverse
     % transformation to the z position)
     corrzRange = zRange * nOil/nSample;
-%         goodFits = goodFits & zFidCorrected >= zRange(1) & zFidCorrected <= zRange(2);
-%         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
-%         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
-%         xLoc = xFidCorrected(goodFits);
-%         yLoc = yFidCorrected(goodFits);
-%         zLoc = zFidCorrected(goodFits);
-%         xLoc_bad = xFidCorrected(badFits);
-%         yLoc_bad = yFidCorrected(badFits);
+    if sum(isnan(catPSFfits(:,30))) ~= size(catPSFfits,1)
         goodFits = goodFits & catPSFfits(:,30) >= corrzRange(1) & catPSFfits(:,30) <= corrzRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
@@ -410,7 +403,6 @@ while anotherpass == true
         zLoc = catPSFfits(goodFits,30);
         xLoc_bad = catPSFfits(badFits,28);
         yLoc_bad = catPSFfits(badFits,29);
-        
     else
         goodFits = goodFits & catPSFfits(:,27) >= corrzRange(1) & catPSFfits(:,27) <= corrzRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;

@@ -1,28 +1,28 @@
 % Copyright (c)2013, The Board of Trustees of The Leland Stanford Junior
 % University. All rights reserved.
-% 
-% Redistribution and use in source and binary forms, with or without 
-% modification, are permitted provided that the following conditions are 
+%
+% Redistribution and use in source and binary forms, with or without
+% modification, are permitted provided that the following conditions are
 % met:
-% 
-% Redistributions of source code must retain the above copyright notice, 
+%
+% Redistributions of source code must retain the above copyright notice,
 % this list of conditions and the following disclaimer.
-% Redistributions in binary form must reproduce the above copyright notice, 
-% this list of conditions and the following disclaimer in the documentation 
+% Redistributions in binary form must reproduce the above copyright notice,
+% this list of conditions and the following disclaimer in the documentation
 % and/or other materials provided with the distribution.
-% Neither the name of the Leland Stanford Junior University nor the names 
-% of its contributors may be used to endorse or promote products derived 
+% Neither the name of the Leland Stanford Junior University nor the names
+% of its contributors may be used to endorse or promote products derived
 % from this software without specific prior written permission.
-% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS 
+% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
 % IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-% PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
-% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, 
-% PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
-% PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
-% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+% THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+% PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+% CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+% EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+% PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+% PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+% LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+% NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function [totalPSFfits, numFrames] = ...
@@ -37,10 +37,10 @@ useDenoising = 1;
 
 if useFidCorrections
     
-
+    
     
     for fileNum=1:length(fidFilePrefix)
-%         fidFiles = [fidFiles; {[fidPath fidFile]}];
+        %         fidFiles = [fidFiles; {[fidPath fidFile]}];
         % load data
         load([fidFilePrefix{fileNum} 'raw fits.mat'],'PSFfits','numFrames','numMoles');
         
@@ -53,9 +53,9 @@ if useFidCorrections
             tempPSFfits = [tempPSFfits; PSFfits(:,1:23)];
         end
         
-%         fileNum = fileNum+1;
-%         [fidFile fidPath] = uigetfile({'*.mat';'*.*'},...
-%             ['Open data file #' num2str(fileNum) ' with raw fiduciary fits']);
+        %         fileNum = fileNum+1;
+        %         [fidFile fidPath] = uigetfile({'*.mat';'*.*'},...
+        %             ['Open data file #' num2str(fileNum) ' with raw fiduciary fits']);
     end
     PSFfits = tempPSFfits;
     numFrames = sum(numFramesInFiles);
@@ -74,8 +74,8 @@ if useFidCorrections
     avgDevZ = zeros(numFrames,1);
     numValidFits = zeros(numFrames,1);
     
-%     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
-%         'deviation in z (nm)' 'good fit flag' 'number of photons'};
+    %     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
+    %         'deviation in z (nm)' 'good fit flag' 'number of photons'};
     
     syncFrames = zeros(1,numSyncFrames);
     lastGoodFrame = numFrames;
@@ -105,10 +105,10 @@ if useFidCorrections
         numPhotons(:,molecule) = moleculeFitParam(:,17);
         
         % write fiduciary data to Excel spreadsheet
-%         xlswrite([saveFilePrefix 'fiduciary deviations.xlsx'], ...
-%             [textHeader; num2cell([(1:numFrames)' devX(:,molecule) devY(:,molecule) ...
-%             devZ(:,molecule) goodFitFlag(:,molecule) numPhotons(:,molecule)])], ...
-%             ['fiduciary ' num2str(molecule)]);
+        %         xlswrite([saveFilePrefix 'fiduciary deviations.xlsx'], ...
+        %             [textHeader; num2cell([(1:numFrames)' devX(:,molecule) devY(:,molecule) ...
+        %             devZ(:,molecule) goodFitFlag(:,molecule) numPhotons(:,molecule)])], ...
+        %             ['fiduciary ' num2str(molecule)]);
         
         % if particle was fit successfully, add its movement to the average
         avgDevX = avgDevX + goodFit.*devX(:,molecule);
@@ -123,22 +123,22 @@ if useFidCorrections
 end
 
 if exist('tempAvgDevX','var')
-%     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
-%         'deviation in z (nm)' 'number of valid fiduciaries'};
-%     
-%     xlswrite([saveFilePrefix 'fiduciary deviations.xlsx'], ...
-%         [textHeader; num2cell([(1:numFrames)' tempAvgDevX tempAvgDevY  ...
-%         tempAvgDevZ numValidFits])], 'average of all fiduciaries');
-%     
-%     xlswrite([saveFilePrefix 'fiduciary deviations.xlsx'], ...
-%         [{'fiduciary files' 'Number of frames'}; ...
-%         fidFiles num2cell(numFramesInFiles')], ...
-%         'concatenation info');
-
+    %     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
+    %         'deviation in z (nm)' 'number of valid fiduciaries'};
+    %
+    %     xlswrite([saveFilePrefix 'fiduciary deviations.xlsx'], ...
+    %         [textHeader; num2cell([(1:numFrames)' tempAvgDevX tempAvgDevY  ...
+    %         tempAvgDevZ numValidFits])], 'average of all fiduciaries');
+    %
+    %     xlswrite([saveFilePrefix 'fiduciary deviations.xlsx'], ...
+    %         [{'fiduciary files' 'Number of frames'}; ...
+    %         fidFiles num2cell(numFramesInFiles')], ...
+    %         'concatenation info');
+    
     % load localization data
-%     moleFiles = {};
-
-        
+    %     moleFiles = {};
+    
+    
     for c = 1:fileNum
         % load data
         load([fitFilePrefix{c} 'molecule fits.mat'],'totalPSFfits','numFrames');
@@ -151,7 +151,7 @@ if exist('tempAvgDevX','var')
         end
     end
     totalPSFfits = tempPSFfits;
-%     numFrames = sum(numFramesInFiles);
+    %     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
     
     % De-noise the fiduciary tracks
@@ -175,30 +175,30 @@ if exist('tempAvgDevX','var')
     clear tempAvgDevX tempAvgDevY tempAvgDevZ;
     
     % output corrected data
-%     save([saveFilePrefix 'molecule fits.mat']);
+    %     save([saveFilePrefix 'molecule fits.mat']);
     
     % output excel spreadsheet
-%     textHeader = [textHeader {'fiduciary corrected x location (nm)' ...
-%         'fiduciary corrected y location (nm)' ...
-%         'fiduciary corrected z location (nm)'}];
+    %     textHeader = [textHeader {'fiduciary corrected x location (nm)' ...
+    %         'fiduciary corrected y location (nm)' ...
+    %         'fiduciary corrected z location (nm)'}];
     
-%     xlswrite([saveFilePrefix 'molecule fits.xlsx'], [textHeader; ...
-%         num2cell(totalPSFfits)], ...
-%         'PSF fits');
-%     xlswrite([saveFilePrefix 'molecule fits.xlsx'], ...
-%         [{'fiduciary files' 'localization files' 'Number of frames'}; ...
-%         fidFiles moleFiles num2cell(numFramesInFiles')], ...
-%         'concatenation info');
+    %     xlswrite([saveFilePrefix 'molecule fits.xlsx'], [textHeader; ...
+    %         num2cell(totalPSFfits)], ...
+    %         'PSF fits');
+    %     xlswrite([saveFilePrefix 'molecule fits.xlsx'], ...
+    %         [{'fiduciary files' 'localization files' 'Number of frames'}; ...
+    %         fidFiles moleFiles num2cell(numFramesInFiles')], ...
+    %         'concatenation info');
     
 else
     
     % load localization data
-%     [moleFile molePath] = uigetfile({'*.mat';'*.*'},'Open data file #1 with PSF localizations');
-        
-%     moleFiles = {};
+    %     [moleFile molePath] = uigetfile({'*.mat';'*.*'},'Open data file #1 with PSF localizations');
+    
+    %     moleFiles = {};
     
     for fileNum=1:length(fitFilePrefix)
-%         moleFiles = [moleFiles; {[molePath moleFile]}];
+        %         moleFiles = [moleFiles; {[molePath moleFile]}];
         clear numFrames;
         load([fitFilePrefix{fileNum} 'molecule fits.mat'],'totalPSFfits','numFrames');
         
@@ -217,31 +217,31 @@ else
             tempPSFfits = [tempPSFfits; totalPSFfits(:,1:27)];
         end
         
-%         fileNum = fileNum+1;
-%         [moleFile molePath] = uigetfile({'*.mat';'*.*'},...
-%             ['Open data file #' num2str(fileNum) ' with PSF localizations']);
+        %         fileNum = fileNum+1;
+        %         [moleFile molePath] = uigetfile({'*.mat';'*.*'},...
+        %             ['Open data file #' num2str(fileNum) ' with PSF localizations']);
     end
     % call 'numFrames' to match the fiducial-corrected terminology
     numFrames = numFramesInFiles;
     % includes NaNs for fiducial-corrected position fields
     totalPSFfits = [tempPSFfits nan(size(tempPSFfits,1),3)];
-%     numFrames = sum(numFramesInFiles);
+    %     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
     
     
     
     
     % output concatenated data
-%     save([saveFilePrefix 'molecule fits.mat']);
+    %     save([saveFilePrefix 'molecule fits.mat']);
     
     % output excel spreadsheet
-%     xlswrite([saveFilePrefix 'molecule fits.xlsx'], [textHeader; ...
-%         num2cell(totalPSFfits)], ...
-%         'PSF fits');
-%     xlswrite([saveFilePrefix 'molecule fits.xlsx'], ...
-%         [{'localization files' 'Number of frames'}; ...
-%         moleFiles num2cell(numFramesInFiles')], ...
-%         'concatenation info');
+    %     xlswrite([saveFilePrefix 'molecule fits.xlsx'], [textHeader; ...
+    %         num2cell(totalPSFfits)], ...
+    %         'PSF fits');
+    %     xlswrite([saveFilePrefix 'molecule fits.xlsx'], ...
+    %         [{'localization files' 'Number of frames'}; ...
+    %         moleFiles num2cell(numFramesInFiles')], ...
+    %         'concatenation info');
     
 end
 end
