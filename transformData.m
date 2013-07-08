@@ -13,8 +13,8 @@ f.fwd_fcn   = 'inverse_fcn';
 f.argname   = 'X';
 f.arglist   = 'X1,X2,X3,...';
 
-iptchecknargin(2,inf,numel(varargin),f.name);
-
+%iptchecknargin(2,inf,numel(varargin),f.name);
+narginchk(2,inf)
 % Get the TFORM struct, t, and the remaining input arguments, A.
 numout = nargout;
 [t, A] = checkTform(f, numout, varargin{1:2});
@@ -102,8 +102,8 @@ function [U, D] = checkCoordinates(f, P, U)
 % U and return them in row vector D.  P is the dimensionality of the
 % input space.
 
-iptcheckinput(U, {'double'}, {'real','finite'}, f.name, 'U', 2);
-
+%iptcheckinput(U, {'double'}, {'real','finite'}, f.name, 'U', 2);
+validateattributes(U,{'double'},{'real','finite'});
 M = ndims(U);
 S = size(U);
 
@@ -150,7 +150,8 @@ ndims1 = ndims(A{1});
 size1 = size(A{1});
 for k = 1:P
     desc = sprintf('%s%d', f.argname, k);
-    iptcheckinput(A{k}, {'double'}, {'real','finite'}, f.name, desc, k+1);
+    %iptcheckinput(A{k}, {'double'}, {'real','finite'}, f.name, desc, k+1);
+    validateattributes(A{k}, {'double'}, {'real','finite'})
     if any(ndims(A{k}) ~= ndims1) || any(size(A{k}) ~= size1)
         error(message('images:tform:ArraySizeMismatch', f.name, f.arglist));
     end

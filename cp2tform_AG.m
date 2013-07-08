@@ -663,8 +663,8 @@ N = [];
 % TRANS = CP2TFORM(INPUT_POINTS,BASE_POINTS,'polynomial',ORDER)
 % TRANS = CP2TFORM(INPUT_POINTS,BASE_POINTS,'lwm',N)
 
-iptchecknargin(6,7,nargin,mfilename);
-
+%iptchecknargin(6,7,nargin,mfilename);
+narginchk(6,7)
 uv = varargin{1};
 xy = varargin{2};
 method = getMethod(varargin{3});

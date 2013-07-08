@@ -388,16 +388,17 @@ set(hfig,'Visible','on');
         updateGUI;
     end
     function saveProj
-        [projFile, projPath] = uiputfile({'*.mat';'*.*'},'Save project MAT file');
-        if isequal(projFile,0)
+        [tempFile, tempPath] = uiputfile({'*.mat';'*.*'},'Save project MAT file');
+        if isequal(tempFile,0)
+            clear tempFile tempPath
             return;
         end
-        projFile = [projPath projFile];
+        projFile = [tempPath tempFile];
         s.projStatus(5) = true;
         g.projStatus(5) = true;
         r.projStatus(5) = true;
         save(projFile,'s','r','g');
-        
+        clear tempFile tempPath
         updateGUI;
     end
 

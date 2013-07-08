@@ -1,6 +1,12 @@
 function [] = Identify_ControlPoints_3D_v1()
 % This function pairs up corresponding localization in the two channels 
 
+% Key outputs:
+% 'matched_cp_reflected' and 'matched_cp_transmitted'
+%
+% [N/A,N/A,frameStart,frameEnd,meanX,meanY,meanZ,...
+% stdX,stdY,stdZ,meanPhotons,numMeasurements,N/A]
+
 % Instrument specific parameters
 nmPerPixel = 125.78;
 roiSize = 270;
@@ -15,6 +21,7 @@ if isequal(reflectedFile,0)
 end
 load([reflectedPath reflectedFile]);
 totalPSFfits_reflected = [frameNum, xLoc, yLoc, zLoc, sigmaX, sigmaY, sigmaZ, numPhotons meanBkgnd];
+clear frameNum xLoc yLoc zLoc sigmaX sigmaY sigmaZ numPhotons meanBkgnd
 
 [transmittedFile transmittedPath] = uigetfile({'*.mat';'*.*'},'Open data file with raw molecule fits in transmitted channel');
 if isequal(transmittedFile,0)
@@ -154,6 +161,7 @@ cpSteps = unique(Locs_transmitted(:,1));
 [ matched_cp_reflected, matched_cp_transmitted, matchedCP ] = nearestFitCP_3D(...
     Locs_reflected, Locs_transmitted, cpSteps, tform );
 
+
 matched_cp_reflected = sortrows(matched_cp_reflected,13);
 matched_cp_transmitted = sortrows(matched_cp_transmitted,13);
 
@@ -170,23 +178,27 @@ function [ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasuremen
 %% Ask for user input
 dlg_title = 'Please Input Parameters';
 prompt = {  'How many stationary frames for each position?',...
+            'What frame do you want to start the averaging?'...
         };
 def = {    '20', ... 
+           '3'...
         };
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 maxNumMeasurement = str2double(inputdialog{1});
+frameAvgStart = str2double(inputdialog{2});
 
 %% Analize sif log file
 sifLogData =  importdata([logPath logFile]);
-motionFrames = find(sifLogData(:,1)==-1);               % This finds -1 entries in the shutters correspoding to moving frames
+motionFrames = find(sifLogData(:,1)==-1);   % This finds -1 entries in the shutters correspoding to moving frames
 validPeriod = diff(motionFrames)==maxNumMeasurement+1;
-validFrames = [];
 validMotionFrames = motionFrames(validPeriod);
+validFrames = zeros(length(validMotionFrames),1);
 
 for i = 1:length(validMotionFrames)
-    frame = validMotionFrames(i);
-    temp = (frame+3:frame+maxNumMeasurement)';
+    frame = validMotionFrames(i); % the frame during which movement occurs
+    temp = (frame+frameAvgStart:frame+maxNumMeasurement)';
+    %temp = (frame+3:frame+maxNumMeasurement)';
     validFrames = [validFrames; temp];
 end
 
@@ -227,6 +239,7 @@ transitionFrames = validFrames([1;find(diff(validFrames)-1)+1]);
 
 % Reflected Channel
 Locs_reflected = [];
+windowDiffRef = [];
 
 for i = 1:length(transitionFrames)
     
@@ -246,6 +259,11 @@ for i = 1:length(transitionFrames)
         stdX = zeros(numBeads,1);
         stdY = zeros(numBeads,1);
         stdZ = zeros(numBeads,1);
+        
+        diffX = zeros(numBeads,1);
+        diffY = zeros(numBeads,1);
+        diffZ = zeros(numBeads,1);
+        
         meanPhotons = zeros(numBeads,1);
         numMeasurements = zeros(numBeads,1);
         
@@ -286,6 +304,13 @@ for i = 1:length(transitionFrames)
                 stdY(j) = std(temp_reflected(measurements,3));
                 stdZ(j) = std(temp_reflected(measurements,4));
                 
+                tempX = temp_reflected(measurements,2);
+                tempY = temp_reflected(measurements,3);
+                tempZ = temp_reflected(measurements,4);
+                diffX(j) = tempX(end) - tempX(1);
+                diffY(j) = tempY(end) - tempY(1);
+                diffZ(j) = tempZ(end) - tempZ(1);
+                
                 meanPhotons(j) = mean(temp_reflected(measurements,8));
                 
                 beads = beads +1;
@@ -297,7 +322,8 @@ for i = 1:length(transitionFrames)
             frameRange(1)*ones(beads,1), frameRange(2)*ones(beads,1),...
             meanX(goodLoc), meanY(goodLoc), meanZ(goodLoc),...
             stdX(goodLoc), stdY(goodLoc), stdZ(goodLoc),...
-            meanPhotons(goodLoc), numMeasurements(goodLoc)];
+            meanPhotons(goodLoc), numMeasurements(goodLoc)...
+            diffX(goodLoc) diffY(goodLoc) diffZ(goodLoc)];
         
         %throw away duplicate entries that may occur due to proximity of
         %two beads
@@ -310,7 +336,8 @@ for i = 1:length(transitionFrames)
             tempArray = tempArray(~badFit,:);
             tempArray = sortrows(tempArray,2);
             clear temp badFit
-            Locs_reflected = cat(1,Locs_reflected, tempArray);
+            Locs_reflected = cat(1,Locs_reflected, tempArray(:,1:12));
+            windowDiffRef = [windowDiffRef;tempArray(:,13:15)];
         end
 
     end
@@ -320,7 +347,7 @@ end
 
 % Transmitted Channel
 Locs_transmitted = [];
-
+windowDiffTrans = [];
 for i = 1:length(transitionFrames)
     
     frameRange = [transitionFrames(i), transitionFrames(i)+(framesToAverage-3)];
@@ -339,6 +366,11 @@ for i = 1:length(transitionFrames)
         stdX = zeros(numBeads,1);
         stdY = zeros(numBeads,1);
         stdZ = zeros(numBeads,1);
+        
+        diffX = zeros(numBeads,1);
+        diffY = zeros(numBeads,1);
+        diffZ = zeros(numBeads,1);
+        
         meanPhotons = zeros(numBeads,1);
         numMeasurements = zeros(numBeads,1);
         
@@ -373,9 +405,15 @@ for i = 1:length(transitionFrames)
                 stdY(j) = std(temp_transmitted(measurements,3));
                 stdZ(j) = std(temp_transmitted(measurements,4));
                 
-                meanPhotons(j) = mean(temp_transmitted(measurements,8));
+                tempX = temp_transmitted(measurements,2);
+                tempY = temp_transmitted(measurements,3);
+                tempZ = temp_transmitted(measurements,4);
+                diffX(j) = tempX(end) - tempX(1);
+                diffY(j) = tempY(end) - tempY(1);
+                diffZ(j) = tempZ(end) - tempZ(1);
                 
-                beads = beads +1;
+                meanPhotons(j) = mean(temp_transmitted(measurements,8));
+                                beads = beads +1;
             end
             
         end
@@ -384,8 +422,8 @@ for i = 1:length(transitionFrames)
             frameRange(1)*ones(beads,1), frameRange(2)*ones(beads,1),...
             meanX(goodLoc), meanY(goodLoc), meanZ(goodLoc),...
             stdX(goodLoc), stdY(goodLoc), stdZ(goodLoc),...
-            meanPhotons(goodLoc), numMeasurements(goodLoc)];
-        
+            meanPhotons(goodLoc), numMeasurements(goodLoc)...
+            diffX(goodLoc) diffY(goodLoc) diffZ(goodLoc)];
         %throw away duplicate entries that may occur due to proximity of
         %two beads
         if ~isempty(tempArray) 
@@ -397,12 +435,47 @@ for i = 1:length(transitionFrames)
             tempArray = tempArray(~badFit,:);
             tempArray = sortrows(tempArray,2);
             clear temp badFit
-            Locs_transmitted = cat(1,Locs_transmitted, tempArray);
+            Locs_transmitted = cat(1,Locs_transmitted, tempArray(:,1:12));
+            windowDiffTrans = [windowDiffTrans ; tempArray(:,13:15)];
         end
-
     end
     
 end
+
+%% Generate diagnostic figures to assess equilibration time of objective
+% % what z positions give various shifts?
+% shiftTPos = windowDiffTrans(:,3) < 0;
+% shiftRPos = windowDiffRef(:,3) < 0;
+% 
+% figure;
+% subplot(1,2,1)
+% hist(Locs_reflected(shiftRPos,7),40);
+% xlabel('z position'); ylabel('counts'); 
+% title('z positions giving shifts < 0 nm for ref channel');
+% 
+% subplot(1,2,2)
+% hist(Locs_transmitted(shiftTPos,7),40);
+% xlabel('z position'); ylabel('counts'); 
+% title('z positions giving shifts < 0 nm for trans channel');
+% 
+% % what is full distribution of shifts? use CP that fill whole avg window
+% fullLengthR = Locs_reflected(:,12) >= 15;
+% fullLengthT = Locs_transmitted(:,12) >= 15;
+% 
+% figure;
+% subplot(1,2,1);
+% hist(windowDiffRef(fullLengthR,3),(max(windowDiffRef(fullLengthR,3))-min(windowDiffRef(fullLengthR,3)))/4);
+% xlabel('z shift from begin to end frame (nm)');
+% ylabel('counts');
+% title('distribution of full-window diffs for reflected channel');
+% xlim([-100 100]);
+% 
+% subplot(1,2,2);
+% hist(windowDiffTrans(fullLengthT,3),(max(windowDiffTrans(fullLengthT,3))-min(windowDiffTrans(fullLengthT,3)))/4);
+% xlabel('z shift from begin to end frame (nm)');
+% ylabel('counts');
+% title('distribution of full-window diffs for trans channel');
+% xlim([-100 100]);
 
 %% Ask for user input
 
@@ -422,8 +495,8 @@ xlabel('Distance (nm)');
 ylabel('Frequency');
 title('Y Localization Precision');
 subplot(2,4,3)
-hist(Locs_reflected(:,10),300)
-xlim([0 10])
+hist(Locs_reflected(:,10),2400)
+xlim([0 20])
 xlabel('Distance (nm)');
 ylabel('Frequency');
 title('Z Localization Precision');
@@ -447,8 +520,8 @@ xlabel('Distance (nm)');
 ylabel('Frequency');
 title('Y Localization Precision');
 subplot(2,4,7)
-hist(Locs_transmitted(:,10),300)
-xlim([0 10])
+hist(Locs_transmitted(:,10),2400)
+xlim([0 20])
 xlabel('Distance (nm)');
 ylabel('Frequency');
 title('Z Localization Precision');
@@ -679,7 +752,7 @@ yCenterCol = 3;
 
 % do channel 1
 [numMatch,dim] = size(cp_channel1_approx);
-cp_channel1 = zeros(size(cp_channel1_approx));
+cp_channel1 = zeros(numMatch,dim);
 
 for i=1:numMatch
     frameFits1 = c1_allfits((c1_allfits(:,frameCol) == selectedFrame(i)),:);
@@ -692,7 +765,7 @@ end
 
 % do channel 2
 [numMatch,dim] = size(cp_channel2_approx);
-cp_channel2 = zeros(size(cp_channel2_approx));
+cp_channel2 = zeros(numMatch,dim);
 
 for i=1:numMatch
     frameFits2 = c2_allfits((c2_allfits(:,frameCol) == selectedFrame(i)),:);
