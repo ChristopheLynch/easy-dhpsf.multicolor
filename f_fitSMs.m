@@ -338,7 +338,7 @@ for stack = selectedFiles % = 1:length(dataFile)
     for c=frames
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
-        data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
+        data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
         
         % subtract the background and continue
         bkgndImg_curr = f_waveletBackground(data);
@@ -501,12 +501,12 @@ for stack = selectedFiles % = 1:length(dataFile)
             
             %% compute derived paramters from fine fitting output
             
-            % Calculate midpoint between two Gaussian spots
             % shift coordinates relative to entire dataset (not just ROI)
             PSFfits(b,3) = PSFfits(b,3) + ROI(1)-1;
             PSFfits(b,4) = PSFfits(b,4) + ROI(2)-1;
             PSFfits(b,5) = PSFfits(b,5) + ROI(1)-1;
             PSFfits(b,6) = PSFfits(b,6) + ROI(2)-1;
+            % Calculate midpoint between two Gaussian spots
             % shift coordinates relative to entire dataset (not just ROI) and
             % convert from pixels to nm
             PSFfits(b,12) = ((fitParam(3)+fitParam(5))/2 + ROI(1)-1)*nmPerPixel;

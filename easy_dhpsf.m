@@ -707,7 +707,7 @@ set(hfig,'Visible','on');
         updateGUI;
     end
     function buttonOutReg_Callback(~,~)
-        [totalPSFfits,numFrames] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
+        [totalPSFfits,numFrames, fidTrackX, fidTrackY, fidTrackZ] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
 %         [matFile, matPath] = uiputfile({'*.mat';'*.*'},'Save localizations as old-style .mat file');
 %         if isequal(matFile,0)
 %             return;
@@ -718,7 +718,7 @@ set(hfig,'Visible','on');
         % these match the numbers in f_fitSMs
 %         ampRatioLimit = 0.5;
 %         sigmaRatioLimit = 0.4;
-        f_processFits(totalPSFfits,numFrames,s.fitFilePrefix);
+        f_processFits(totalPSFfits,numFrames,s.fitFilePrefix,fidTrackX, fidTrackY, fidTrackZ);
 %         f_processFits(totalPSFfits,numFrames,ROI,conversionFactor,...
 %             s.sigmaBounds,s.lobeDistBounds,ampRatioLimit,sigmaRatioLimit,...
 %             s.nmPerPixel);

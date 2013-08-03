@@ -47,12 +47,9 @@ numSyncFrames = 25;
 options = optimset('FunValCheck','on','Diagnostics','off','Jacobian','on', 'Display', 'off');
 %    'FinDiffType','central','DerivativeCheck','on');
 
-
 outputFilePrefix = cell(1,length(dataFile));
 
 for stack = 1:length(dataFile)
-    
-    
     
     dataFileInfo = imfinfo([dataPath dataFile{stack}]);
     numFrames = length(dataFileInfo);
@@ -302,7 +299,7 @@ for stack = 1:length(dataFile)
         
         data = double(imread([dataPath dataFile{stack}],a,'Info',dataFileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ...
-            ROI(1):ROI(1)+ROI(3)-1);
+            ROI(1):ROI(1)+ROI(3)-1);        % crop image to ROI
         
         bkgndImg = f_waveletBackground(data);
         data = data - bkgndImg;
@@ -563,18 +560,27 @@ for stack = 1:length(dataFile)
                     max(xIdx(:)) max(yIdx(:)) max(xIdx(:)) max(yIdx(:)) ...
                     sigmaBounds(2) sigmaBounds(2)];
                 
-                
-                
                 %% Fit with lsqnonlin
                 [fitParam,temp,residual,exitflag] = lsqnonlin(@(x) ...
                     f_doubleGaussianVector(x,data(yIdx(:,1),xIdx(1,:)),0,xIdx,yIdx),...
                     fitParam,lowerBound,upperBound,options);
                 PSFfits(rowIdx,1:13) = [a b fitParam 0 sum(abs(residual)) exitflag];
-                
+
+                % shift coordinates relative to entire dataset (not just ROI)
+                PSFfits(rowIdx,5) = PSFfits(rowIdx,5) + ROI(1)-1;
+                PSFfits(rowIdx,6) = PSFfits(rowIdx,6) + ROI(2)-1;
+                PSFfits(rowIdx,7) = PSFfits(rowIdx,7) + ROI(1)-1;
+                PSFfits(rowIdx,8) = PSFfits(rowIdx,8) + ROI(2)-1;
                 % Calculate midpoint between two Gaussian spots
+                % shift coordinates relative to entire dataset (not just ROI) and
                 % convert from pixels to nm
-                PSFfits(rowIdx,14) = ((fitParam(3)+fitParam(5))/2)*nmPerPixel;
-                PSFfits(rowIdx,15) = ((fitParam(4)+fitParam(6))/2)*nmPerPixel;
+                PSFfits(rowIdx,14) = ((fitParam(3)+fitParam(5))/2 + ROI(1)-1)*nmPerPixel;
+                PSFfits(rowIdx,15) = ((fitParam(4)+fitParam(6))/2 + ROI(2)-1)*nmPerPixel;
+         
+%                 % Calculate midpoint between two Gaussian spots
+%                 % convert from pixels to nm
+%                 PSFfits(rowIdx,14) = ((fitParam(3)+fitParam(5))/2)*nmPerPixel;
+%                 PSFfits(rowIdx,15) = ((fitParam(4)+fitParam(6))/2)*nmPerPixel;
                 
                 % Below is the calculation of the angle of the two lobes.
                 % Remember that two vertical lobes is focal plane because camera
@@ -614,8 +620,7 @@ for stack = 1:length(dataFile)
                 % Gaussian width Ratio
                 simgaRatio = abs(fitParam(7) - fitParam(8))/sum(fitParam(7:8));
                 PSFfits(b,20) = simgaRatio;
-                
-                
+
                 %% Now evaluate the fits
                 % Conditions for fits (play with these):
                 % (1) Amplitude of both lobes > 0
@@ -658,7 +663,9 @@ for stack = 1:length(dataFile)
                 % if fit was successful, use the computed center location as center
                 % of box for next iteration
                 if PSFfits(rowIdx,13) > 0
-                    moleLocs(b,:) = round(PSFfits(rowIdx,14:15)/nmPerPixel);
+                    moleLocs(b,:) = [round((fitParam(3)+fitParam(5))/2), ...
+                        round((fitParam(4)+fitParam(6))/2)]
+%                     round(PSFfits(rowIdx,14:15)/nmPerPixel);
                 end
                 
                 % plot image reconstruction so that fits can be checked
