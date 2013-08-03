@@ -30,7 +30,7 @@
 %     sigmaBounds,lobeDistBounds,ampRatioLimit,sigmaRatioLimit,nmPerPixel)
 % current approach: load all relevant variables from f_fitSMs output
 % directly
-function f_processFits(catPSFfits,numFrames,fitFilePrefix)
+function f_processFits(catPSFfits,numFrames,fitFilePrefix, fidTrackX, fidTrackY, fidTrackZ)
 useTimeColors = 0;
 numPhotonRange = [300 10000];
 xyPrecRange = [0 100];
@@ -673,7 +673,7 @@ mkdir(savePath);
 if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
-        'wlShiftX', 'wlShiftY','goodFits');
+        'wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ');
 end
 %%
 % output excel spreadsheet
