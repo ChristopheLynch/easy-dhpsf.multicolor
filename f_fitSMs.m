@@ -84,31 +84,31 @@ def = {};
 prompt = {};
 
 %%%%%%%%%%%%%%%%
-def = {'Yes'};
-prompt = {'Do you want to estimate the laser profile?'};
-%%%%%%%%%%%%%%%% this comment and the one below can be uncommented to allow
-%%%%%%%%%%%%%%%% selection of specific frames: however, this is *slow*
-% % populates 'fileInfo' and 'numFrames' for all files, and generates the
-% % fields for the frame selection dlg
-% fileInfoAll=cell(length(selectedFiles),1);
-% numFramesAll = zeros(length(selectedFiles),1);
-% def = cell(length(selectedFiles)+1,1);
-% prompt = cell(length(selectedFiles)+1,1);
-%
-% for i = 1:length(selectedFiles)
-%     fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
-%     numFramesAll(i) = length(fileInfoAll{i});
-%     def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
-%     prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
-% end
-%     def{end} = 'No';
-%     prompt{end} = 'Do you want to estimate the laser profile?';
+% def = {'Yes'};
+% prompt = {'Do you want to estimate the laser profile?'};
+%%%%%%%%%%%%%%% this comment and the one below can be uncommented to allow
+%%%%%%%%%%%%%%% selection of specific frames: however, this is *slow*
+% populates 'fileInfo' and 'numFrames' for all files, and generates the
+% fields for the frame selection dlg
+fileInfoAll=cell(length(selectedFiles),1);
+numFramesAll = zeros(length(selectedFiles),1);
+def = cell(length(selectedFiles)+1,1);
+prompt = cell(length(selectedFiles)+1,1);
+
+for i = 1:length(selectedFiles)
+    fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
+    numFramesAll(i) = length(fileInfoAll{i});
+    def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
+    prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
+end
+    def{end} = 'No';
+    prompt{end} = 'Do you want to estimate the laser profile?';
 
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-%%%%%%%%%%%%%%%%** this must be uncommented if selecting frames **
-% for i = 1:length(selectedFiles)
-%     framesAll{i} = str2num(inputdialog{i});
-% end
+%%%%%%%%%%%%%%%** this must be uncommented if selecting frames **
+for i = 1:length(selectedFiles)
+    framesAll{i} = str2num(inputdialog{i});
+end
 findLaserInt = strcmp(inputdialog{end},'Yes');
 
 % This information should be passed from the earlier execution of
@@ -338,7 +338,7 @@ for stack = selectedFiles % = 1:length(dataFile)
     for c=frames
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
-        data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
+        data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
         
         % subtract the background and continue
         bkgndImg_curr = f_waveletBackground(data);
@@ -501,12 +501,12 @@ for stack = selectedFiles % = 1:length(dataFile)
             
             %% compute derived paramters from fine fitting output
             
-            % Calculate midpoint between two Gaussian spots
             % shift coordinates relative to entire dataset (not just ROI)
             PSFfits(b,3) = PSFfits(b,3) + ROI(1)-1;
             PSFfits(b,4) = PSFfits(b,4) + ROI(2)-1;
             PSFfits(b,5) = PSFfits(b,5) + ROI(1)-1;
             PSFfits(b,6) = PSFfits(b,6) + ROI(2)-1;
+            % Calculate midpoint between two Gaussian spots
             % shift coordinates relative to entire dataset (not just ROI) and
             % convert from pixels to nm
             PSFfits(b,12) = ((fitParam(3)+fitParam(5))/2 + ROI(1)-1)*nmPerPixel;

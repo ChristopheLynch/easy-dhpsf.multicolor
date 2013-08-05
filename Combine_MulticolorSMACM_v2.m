@@ -16,9 +16,14 @@ load([tformPath tformFile]);
 x = matched_cp_reflected(:,5);
 y = matched_cp_reflected(:,6);
 z = matched_cp_reflected(:,7);
-F_FRE = TriScatteredInterp(x,y,z,FRE_full(:,1), 'natural')
-F_TRE = TriScatteredInterp(x,y,z,TRE_full(:,1), 'natural')
-
+F_FRE = TriScatteredInterp(x,y,z,FRE_full(:,1), 'natural');
+F_FRE_X = TriScatteredInterp(x,y,z,FRE_full(:,2), 'natural');
+F_FRE_Y = TriScatteredInterp(x,y,z,FRE_full(:,3), 'natural');
+F_FRE_Z = TriScatteredInterp(x,y,z,FRE_full(:,4), 'natural');
+F_TRE = TriScatteredInterp(x,y,z,TRE_full(:,1), 'natural');
+F_TRE_X = TriScatteredInterp(x,y,z,TRE_full(:,2), 'natural');
+F_TRE_Y = TriScatteredInterp(x,y,z,TRE_full(:,3), 'natural');
+F_TRE_Z = TriScatteredInterp(x,y,z,TRE_full(:,4), 'natural');
 
 [whiteLightFile whiteLightPath] = uigetfile({'*.tif';'*.*'},'Open image stack with white light image');
 
@@ -48,7 +53,10 @@ while ~isequal(LocFile,0)
     dataSet.sigmaZ = sigmaZ;
     dataSet.numPhotons = numPhotons;
     dataSet.meanBkgnd = meanBkgnd;
-        
+    dataSet.fidTrackX = fidTrackX;
+    dataSet.fidTrackY = fidTrackY;
+    dataSet.fidTrackZ = fidTrackZ;
+            
     dlg_title = 'Transform dataset';
     prompt = {'Do you want to transform this dataset?'};
     def =       { 'Yes' };
@@ -63,12 +71,41 @@ while ~isequal(LocFile,0)
             dataSet.yLoc_transformed = transformedData(:,2);
             dataSet.zLoc_transformed = transformedData(:,3);
             
+            
+            dataSet.fidTrackX_transformed = NaN(length(fidTrackX),1);
+            dataSet.fidTrackY_transformed = NaN(length(fidTrackX),1);
+            dataSet.fidTrackZ_transformed = NaN(length(fidTrackX),1);
+            transformedData = transformData([fidTrackX(~isnan(fidTrackX)),...
+                fidTrackY(~isnan(fidTrackY)),...
+                fidTrackZ(~isnan(fidTrackZ))],tform);
+            dataSet.fidTrackX_transformed(~isnan(fidTrackX)) = transformedData(:,1);
+            dataSet.fidTrackY_transformed(~isnan(fidTrackY)) = transformedData(:,2);
+            dataSet.fidTrackZ_transformed(~isnan(fidTrackZ)) = transformedData(:,3);
+            
+            dataSet.fidTrack_interpolated_FRE = NaN(length(fidTrackX),4);
+            dataSet.fidTrack_interpolated_TRE = NaN(length(fidTrackX),4);
+            dataSet.fidTrack_interpolated_FRE(~isnan(fidTrackX),:) = [...
+                F_FRE(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                F_FRE_X(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                F_FRE_Y(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                F_FRE_Z(transformedData(:,1),transformedData(:,2),transformedData(:,3)) ];
+            dataSet.fidTrack_interpolated_TRE(~isnan(fidTrackX),:) = [...
+                F_TRE(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                F_TRE_X(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                F_TRE_Y(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                F_TRE_Z(transformedData(:,1),transformedData(:,2),transformedData(:,3)) ];
+            
         case 'No'
             
             dataSet.transformedDataset = false;
             dataSet.xLoc_transformed = NaN(length(xLoc),1);
             dataSet.yLoc_transformed = NaN(length(xLoc),1);
             dataSet.zLoc_transformed = NaN(length(xLoc),1);
+            dataSet.fidTrackX_transformed = NaN(length(xLoc),1);
+            dataSet.fidTrackY_transformed = NaN(length(xLoc),1);
+            dataSet.fidTrackZ_transformed = NaN(length(xLoc),1);
+            dataSet.fidTrack_interpolated_FRE = NaN(length(fidTrackX),4);
+            dataSet.fidTrack_interpolated_TRE = NaN(length(fidTrackX),4);
             
         case 'Cancel'
             error('User cancelled the program');
@@ -103,6 +140,148 @@ clear sigmaRatioLimit sigmaX sigmaY sigmaZ transformedData
 clear xLoc yLoc zLoc zRange
 
 % save('workspace.mat');
+%% Show the fiducial tracks in the same coordinate system
+
+
+display = 1:length(dataSets);    
+color = {'green', 'red', 'blue', 'cyan', 'yellow' };
+
+figure_h_a = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
+    'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
+    'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
+    'DefaultAxesLineWidth',1.2);
+
+
+for i = display
+    if dataSets(i).transformedDataset
+        scatter3(dataSets(i).fidTrackX_transformed,...
+            dataSets(i).fidTrackY_transformed,...
+            dataSets(i).fidTrackZ_transformed,...
+            5,'filled', color{i});
+%         xlim([min(dataSets(i).xLoc_transformed) max(dataSets(i).xLoc_transformed)]);
+%         ylim([min(dataSets(i).yLoc_transformed) max(dataSets(i).yLoc_transformed)]);
+    else
+        scatter3(dataSets(i).fidTrackX,...
+            dataSets(i).fidTrackY,...
+            dataSets(i).fidTrackZ,...
+            5,'filled', color{i});
+%         xlim([min(dataSets(i).xLoc) max(dataSets(i).xLoc)]);
+%         ylim([min(dataSets(i).yLoc) max(dataSets(i).yLoc)]);
+    end
+    
+    xlabel('x (nm)');ylabel('y (nm)');zlabel('z (nm)');
+    axis vis3d equal;
+    hold on
+    
+end
+hold off
+
+saveas(figure_h_a,'3DFidCorrelation.fig');
+saveas(figure_h_a,'3DFidCorrelation.png');
+%%
+figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
+    'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
+    'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
+    'DefaultAxesLineWidth',1.2);
+
+for i = display
+    if dataSets(i).transformedDataset
+        subplot(3,1,1)
+        plot(dataSets(i).fidTrackX_transformed, color{i});
+        xlabel('frame number');ylabel('X position (nm)');
+        hold on
+        subplot(3,1,2)
+        plot(dataSets(i).fidTrackY_transformed, color{i});
+        xlabel('frame number');ylabel('Y position (nm)');
+        hold on
+        subplot(3,1,3)
+        plot(dataSets(i).fidTrackZ_transformed, color{i});
+        xlabel('frame number');ylabel('Z position (nm)');
+        hold on
+    else
+        subplot(3,1,1)
+        plot(dataSets(i).fidTrackX, color{i});
+        xlabel('frame number');ylabel('X position (nm)');
+        hold on
+        subplot(3,1,2)
+        plot(dataSets(i).fidTrackY, color{i});
+        xlabel('frame number');ylabel('Y position (nm)');
+        hold on
+        subplot(3,1,3)
+        plot(dataSets(i).fidTrackZ, color{i});
+        xlabel('frame number');ylabel('Z position (nm)');
+        hold on
+    end
+    hold on
+    
+end
+hold off
+
+saveas(figure_h_b,'XYZFidTracks.fig');
+saveas(figure_h_b,'XYZFidTracks.png');
+%%
+figure_h_c = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
+    'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
+    'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
+    'DefaultAxesLineWidth',1.2);
+
+subplot(4,1,1)
+plot(dataSets(1).fidTrackX-dataSets(2).fidTrackX_transformed);
+xlabel('frame number');ylabel('X position shift (nm)');
+mean = nanmean(dataSets(1).fidTrackX-dataSets(2).fidTrackX_transformed);
+stdev = nanstd(dataSets(1).fidTrackX-dataSets(2).fidTrackX_transformed);
+legend(['offset = ' num2str(mean),...
+    ' +/- ' num2str(stdev)])
+ylim([mean-5*stdev mean+7*stdev])
+hold on 
+plot([0;length(dataSets(1).fidTrackX)],[mean; mean],'red','LineWidth' ,2)
+hold off
+
+subplot(4,1,2)
+plot(dataSets(1).fidTrackY-dataSets(2).fidTrackY_transformed);
+xlabel('frame number');ylabel('Y position shift (nm)');
+mean = nanmean(dataSets(1).fidTrackY-dataSets(2).fidTrackY_transformed);
+stdev = nanstd(dataSets(1).fidTrackY-dataSets(2).fidTrackY_transformed);
+legend(['offset = ' num2str(mean),...
+    ' +/- ' num2str(stdev)])
+ylim([mean-5*stdev mean+7*stdev])
+hold on 
+plot([0;length(dataSets(1).fidTrackX)],[mean; mean],'red','LineWidth' ,2)
+hold off
+
+subplot(4,1,3)
+plot(dataSets(1).fidTrackZ-dataSets(2).fidTrackZ_transformed);
+xlabel('frame number');ylabel('Z position shift (nm)');
+mean = nanmean(dataSets(1).fidTrackZ-dataSets(2).fidTrackZ_transformed);
+stdev = nanstd(dataSets(1).fidTrackZ-dataSets(2).fidTrackZ_transformed);
+legend(['offset = ' num2str(mean),...
+    ' +/- ' num2str(stdev)])
+ylim([mean-5*stdev mean+7*stdev])
+hold on 
+plot([0;length(dataSets(1).fidTrackX)],[mean; mean],'red','LineWidth' ,2)
+hold off
+
+subplot(4,1,4)
+euclid_Dist = sqrt(((dataSets(1).fidTrackX-dataSets(2).fidTrackX_transformed).^2)+...
+    ((dataSets(1).fidTrackY-dataSets(2).fidTrackY_transformed).^2+...
+    ((dataSets(1).fidTrackZ-dataSets(2).fidTrackZ_transformed).^2)));
+plot(euclid_Dist);
+xlabel('frame number');ylabel('3D shift (nm)');
+mean = nanmean(euclid_Dist);
+stdev = nanstd(euclid_Dist);
+legend(['offset  = ' num2str(mean),...
+    ' +/- ' num2str(stdev)])
+ylim([mean-5*stdev mean+7*stdev])
+hold on 
+plot([0;length(dataSets(1).fidTrackX)],[mean; mean],'red','LineWidth' ,2)
+hold off
+
+
+saveas(figure_h_c,'XYZFidMisregistration.fig');
+saveas(figure_h_c,'XYZFidMisregistration.png');
 
 %% Display the results
 % load('workspace.mat');
@@ -149,8 +328,8 @@ while anotherpass == true
                 'Info', whiteLightInfo));
         end
         % resize white light to the size of the ROI of the single molecule fits
-%         ROI_initial = [1, 1, 270, 270];
-        ROI_initial = [1, 1, 200, 200];
+        ROI_initial = [1, 1, 270, 270];
+%         ROI_initial = [1, 1, 200, 200];
         whiteLight = whiteLight(ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1,ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1);
         % rescale white light image to vary from 0 to 1
         whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
@@ -245,22 +424,22 @@ while anotherpass == true
     end
     %scatter3(xLoc,yLoc,zLoc,1,'filled');
 
-display = 1:length(dataSets);    
-color = {'green', 'red', 'blue', 'cyan', 'yellow' };
+% display = 1:length(dataSets);    
+% color = {'green', 'red', 'blue', 'cyan', 'yellow' };
 
 for i = display
     if dataSets(i).transformedDataset
         scatter(dataSets(i).xLoc_transformed,dataSets(i).yLoc_transformed,1,'filled', color{i});
         xlim([min(dataSets(i).xLoc_transformed) max(dataSets(i).xLoc_transformed)]);
         ylim([min(dataSets(i).yLoc_transformed) max(dataSets(i).yLoc_transformed)]);
-        xMean = mean(dataSets(i).xLoc_transformed);
-        yMean = mean(dataSets(i).yLoc_transformed);
+%         xMean = mean(dataSets(i).xLoc_transformed);
+%         yMean = mean(dataSets(i).yLoc_transformed);
     else
         scatter(dataSets(i).xLoc,dataSets(i).yLoc,1,'filled', color{i});
         xlim([min(dataSets(i).xLoc) max(dataSets(i).xLoc)]);
         ylim([min(dataSets(i).yLoc) max(dataSets(i).yLoc)]);
-        xMean = mean(dataSets(i).xLoc);
-        yMean = mean(dataSets(i).yLoc);
+%         xMean = mean(dataSets(i).xLoc);
+%         yMean = mean(dataSets(i).yLoc);
     end
     
     xlabel('x (nm)');ylabel('y (nm)');
@@ -293,6 +472,7 @@ hold off
     croppedDataSets = [];
     interpolated_FREs = [];
     interpolated_TREs = [];
+    plotRange = [];
     
     for i = display
         
@@ -343,9 +523,15 @@ hold off
         scatter3(xLoc,yLoc,zLoc,scatterSize,'filled',color{i});
         axis vis3d equal;
         
-        xlim([min(xLoc) max(xLoc)]);
-        ylim([min(yLoc) max(yLoc)]);
-        zlim([min(zLoc) max(zLoc)]);
+        plotRange = [plotRange; [min(xLoc) max(xLoc) min(yLoc) max(yLoc) min(zLoc) max(zLoc)]];
+        plotRange = max(plotRange,[],1);
+        
+        %         xlim([min(xLoc) max(xLoc)]);
+        %         ylim([min(yLoc) max(yLoc)]);
+        %         zlim([min(zLoc) max(zLoc)]);
+        xlim([plotRange(1) plotRange(2)]);
+        ylim([plotRange(3) plotRange(4)]);
+        zlim([plotRange(5) plotRange(6)]);
         xlabel('x (nm)');ylabel('y (nm)');zlabel('z (nm)');
         title({[num2str(length(interpolated_FREs)) ' transformed localizations'];...
             ['Mean FRE = ' num2str(mean(interpolated_FREs)) ' nm'];...
@@ -396,7 +582,7 @@ end
 [saveFile, savePath] = uiputfile({'*.mat';'*.*'},'Enter a filename to save this ROI. Otherwise, click cancel.');
 if ~isequal(saveFile,0)
     save([savePath saveFile(1:length(saveFile)-4) '_multicolorSMACM.mat'],'croppedDataSets','yLoc','LocFiles','ROI','dataSets','tformFile','tformPath','validPoints',...
-        'whiteLightFile','whiteLightPath','whiteLight','wlShiftX','wlShiftY');
+        'whiteLightFile','whiteLightPath','whiteLight','wlShiftX','wlShiftY', 'tform');
 end
 %%
 % % output excel spreadsheet

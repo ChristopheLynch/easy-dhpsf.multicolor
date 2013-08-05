@@ -30,13 +30,14 @@
 %     sigmaBounds,lobeDistBounds,ampRatioLimit,sigmaRatioLimit,nmPerPixel)
 % current approach: load all relevant variables from f_fitSMs output
 % directly
-function f_processFits(catPSFfits,numFrames,fitFilePrefix)
+function f_processFits(catPSFfits,numFrames,fitFilePrefix, fidTrackX, fidTrackY, fidTrackZ)
 useTimeColors = 0;
 numPhotonRange = [300 10000];
 xyPrecRange = [0 100];
 zPrecRange = [0 150];
 numFramesAll = sum(numFrames);
 load([fitFilePrefix{1} 'molecule fits.mat']);
+
 
 % Parameters
 
@@ -395,14 +396,6 @@ while anotherpass == true
     corrzRange = zRange * nOil/nSample;
     
     if sum(isnan(catPSFfits(:,30))) ~= size(catPSFfits,1)
-%         goodFits = goodFits & zFidCorrected >= zRange(1) & zFidCorrected <= zRange(2);
-%         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
-%         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
-%         xLoc = xFidCorrected(goodFits);
-%         yLoc = yFidCorrected(goodFits);
-%         zLoc = zFidCorrected(goodFits);
-%         xLoc_bad = xFidCorrected(badFits);
-%         yLoc_bad = yFidCorrected(badFits);
         goodFits = goodFits & catPSFfits(:,30) >= corrzRange(1) & catPSFfits(:,30) <= corrzRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
@@ -411,7 +404,6 @@ while anotherpass == true
         zLoc = catPSFfits(goodFits,30);
         xLoc_bad = catPSFfits(badFits,28);
         yLoc_bad = catPSFfits(badFits,29);
-        
     else
         goodFits = goodFits & catPSFfits(:,27) >= corrzRange(1) & catPSFfits(:,27) <= corrzRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
@@ -681,7 +673,7 @@ mkdir(savePath);
 if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
-        'wlShiftX', 'wlShiftY','goodFits');
+        'wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ');
 end
 %%
 % output excel spreadsheet
