@@ -440,7 +440,7 @@ for a=1:size(sifLogData,1)-2
     title(['Frame ' num2str(a) ': raw data - dark counts']);
 
     subplot('Position',[0.525 0.025 .9/2 .95]);
-    imagesc(reconstructImg+bkgndImg,[min(data(:),max(data(:)]);
+    imagesc(reconstructImg+bkgndImg,[min(data(:)),max(data(:))]);
     axis image;
     title('Image reconstructed from fitted matches');
 
