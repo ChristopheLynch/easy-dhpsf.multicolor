@@ -139,8 +139,9 @@ for frame = 1:190
 end
 dataAvg = dataAvg/190 - darkAvg;
 
+% could change contrast here
 hROI=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
-imagesc(dataAvg);axis image;colormap hot;
+imagesc(dataAvg); axis image;colormap hot;
 ROI = imrect(gca,[1 1 128 128]);
 title({'Shape box and double-click to choose region of interest for PSF fitting' ...
     mat2str(ROI.getPosition)});
@@ -155,7 +156,7 @@ cropWidth = ROI(3);
 close(hROI);
 
 %% Ask user for bead location(s)   
-
+% could change contrast here
 hLocs=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
 imagesc(dataAvg(ROI(2):ROI(2)+ROI(4)-1, ...
     ROI(1):ROI(1)+ROI(3)-1));axis image;colorbar;colormap hot; 
@@ -432,13 +433,15 @@ for a=1:size(sifLogData,1)-2
 %%  plot results of template matching and fitting
     set(0,'CurrentFigure',h);
     
+    % could change contrast here
     data = data+bkgndImg;
     subplot('Position',[0.025 0.025 .9/2 .95]);
     imagesc(data);axis image;colormap hot;
     title(['Frame ' num2str(a) ': raw data - dark counts']);
 
     subplot('Position',[0.525 0.025 .9/2 .95]);
-    imagesc(reconstructImg+bkgndImg,[min(data(:)) max(data(:))]);axis image;
+    imagesc(reconstructImg+bkgndImg,[min(data(:),max(data(:)]);
+    axis image;
     title('Image reconstructed from fitted matches');
 
     drawnow;
@@ -696,8 +699,10 @@ meanSigma2 = zeros(numFiles,numBeads,numSteps);
 stdSigma2 = zeros(numFiles,numBeads,numSteps);
 meanSigmaRatio = zeros(numFiles,numBeads,numSteps);
 stdSigmaRatio = zeros(numFiles,numBeads,numSteps);
-
-
+goodFit_f = zeros(numFiles,numBeads,numSteps);
+goodFit_b = zeros(numFiles,numBeads,numSteps);
+zAngleZero = zeros(numFiles,numBeads);
+z = zeros(numFiles,numBeads,numSteps);
 %     figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
 
 textHeader = {'Start Frame' 'End Frame' 'Mean Angle (deg)' ...
@@ -819,18 +824,18 @@ for n = 1:numFiles
 
 %     goodFit = goodFit(2:length(goodFit)-1);
 %     z = 0:stepSize:stepSize*(numSteps-1);
-    z = meanCFocPos(n,:) - meanCFocPos(n,1);
+    z0 = meanCFocPos(n,:) - meanCFocPos(n,1);
     
-    z1 = z(2:length(z)-1);
+    z1 = z0(2:length(z0)-1);
     % flip definition of z if angle vs z slope is positive (should be
     % negative)
     if slope>0
-        z = -z;
+        z0 = -z0;
         z1 = -z1;
     end
 
     % if there aren't enough points for a good curve, skip this fiduciary
-    if length(z(goodFit))<2
+    if length(z0(goodFit))<2
         continue;
     end
 
@@ -839,12 +844,12 @@ for n = 1:numFiles
         squeeze(meanX(n,bead,goodFit_forward)),0,'spline');
     yAngleZero = interp1(squeeze(meanAngles(n,bead,goodFit_forward)),...
         squeeze(meanY(n,bead,goodFit_forward)),0,'spline');
-    zAngleZero = interp1(squeeze(meanAngles(n,bead,goodFit_forward)),...
-        z(goodFit_forward),0,'spline');
+    zAngleZero(n,bead) = interp1(squeeze(meanAngles(n,bead,goodFit_forward)),...
+        z0(goodFit_forward),0,'spline');
     meanX(n,bead,goodFit) = meanX(n,bead,goodFit) - xAngleZero;
     meanY(n,bead,goodFit) = meanY(n,bead,goodFit) - yAngleZero;
-    z(goodFit) = z(goodFit)-zAngleZero;
-    z1 = z1-zAngleZero;
+    z0(goodFit) = z0(goodFit)-zAngleZero(n,bead);
+    z1 = z1-zAngleZero(n,bead);
 
     %% plot calibration parameters
     if logical(sum(goodFit_backward))
@@ -856,10 +861,10 @@ for n = 1:numFiles
     end
     h1 = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
     subplot(2,3,1:2);
-    errorbar(z(goodFit_forward),meanAngles(n,bead,goodFit_forward),stddevAngles(n,bead,goodFit_forward),'-');
+    errorbar(z0(goodFit_forward),meanAngles(n,bead,goodFit_forward),stddevAngles(n,bead,goodFit_forward),'-');
     if logical(sum(goodFit_backward))
         hold on
-        errorbar(z(goodFit_backward),meanAngles(n,bead,goodFit_backward),stddevAngles(n,bead,goodFit_backward),':');
+        errorbar(z0(goodFit_backward),meanAngles(n,bead,goodFit_backward),stddevAngles(n,bead,goodFit_backward),':');
         hold off
     end
     axis tight;
@@ -869,12 +874,12 @@ for n = 1:numFiles
     ylabel('Angle (deg)');
     
     subplot(2,3,3);
-    plot(z(goodFit_forward),squeeze(squeeze(meanX(n,bead,goodFit_forward))),'b');
+    plot(z0(goodFit_forward),squeeze(squeeze(meanX(n,bead,goodFit_forward))),'b');
     hold on;
-    plot(z(goodFit_forward),squeeze(squeeze(meanY(n,bead,goodFit_forward))),'r');
+    plot(z0(goodFit_forward),squeeze(squeeze(meanY(n,bead,goodFit_forward))),'r');
     if logical(sum(goodFit_backward))
-        plot(z(goodFit_backward),squeeze(squeeze(meanX(n,bead,goodFit_backward))),':b');
-        plot(z(goodFit_backward),squeeze(squeeze(meanY(n,bead,goodFit_backward))),':r');
+        plot(z0(goodFit_backward),squeeze(squeeze(meanX(n,bead,goodFit_backward))),':b');
+        plot(z0(goodFit_backward),squeeze(squeeze(meanY(n,bead,goodFit_backward))),':r');
     end
     axis tight;
     %     legend('x forward','x backward','y forward','y backward');
@@ -883,12 +888,12 @@ for n = 1:numFiles
     hold off;
     
     subplot(2,3,4);
-    plot(z(goodFit_forward),squeeze(stdX(n,bead,goodFit_forward)),'b');
+    plot(z0(goodFit_forward),squeeze(stdX(n,bead,goodFit_forward)),'b');
     hold on;
-    plot(z(goodFit_forward),squeeze(stdY(n,bead,goodFit_forward)),'r');
+    plot(z0(goodFit_forward),squeeze(stdY(n,bead,goodFit_forward)),'r');
     if logical(sum(goodFit_backward))
-        plot(z(goodFit_backward),squeeze(stdX(n,bead,goodFit_backward)),':b');
-        plot(z(goodFit_backward),squeeze(stdY(n,bead,goodFit_backward)),':r');
+        plot(z0(goodFit_backward),squeeze(stdX(n,bead,goodFit_backward)),':b');
+        plot(z0(goodFit_backward),squeeze(stdY(n,bead,goodFit_backward)),':r');
     end
     axis tight;
     ylim([0 40]);
@@ -910,10 +915,10 @@ for n = 1:numFiles
     ylabel('z localization precision (nm)');
     
     subplot(2,3,6);
-    errorbar(z(goodFit_forward),meanPhotons(n,bead,goodFit_forward),stddevPhotons(n,bead,goodFit_forward),'b');
+    errorbar(z0(goodFit_forward),meanPhotons(n,bead,goodFit_forward),stddevPhotons(n,bead,goodFit_forward),'b');
     if logical(sum(goodFit_backward))
         hold on
-        errorbar(z(goodFit_backward),meanPhotons(n,bead,goodFit_backward),stddevPhotons(n,bead,goodFit_backward),':b');
+        errorbar(z0(goodFit_backward),meanPhotons(n,bead,goodFit_backward),stddevPhotons(n,bead,goodFit_backward),':b');
         hold off
     end
     axis tight;
@@ -927,7 +932,7 @@ for n = 1:numFiles
     
     h2=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
     subplot(2,3,1);
-    errorbar(z(goodFit_forward),meanAngles(n,bead,goodFit_forward),stddevAngles(n,bead,goodFit_forward),'-');
+    errorbar(z0(goodFit_forward),meanAngles(n,bead,goodFit_forward),stddevAngles(n,bead,goodFit_forward),'-');
     hold on
 %     errorbar(z(goodFit_backward),meanAngles(n,bead,goodFit_backward),stddevAngles(n,bead,goodFit_backward),':');
     axis tight;
@@ -938,16 +943,16 @@ for n = 1:numFiles
     hold off
 
     subplot(2,3,4);
-    errorbar(z(goodFit_forward),meanInterlobeDistance(n,bead,goodFit_forward),stdInterlobeDistance(n,bead,goodFit_forward),'-');
+    errorbar(z0(goodFit_forward),meanInterlobeDistance(n,bead,goodFit_forward),stdInterlobeDistance(n,bead,goodFit_forward),'-');
     axis tight;
     xlabel('z position (nm)');
     ylabel('Interlobe Distance (pix)');
     hold off;
     
     subplot(2,3,2);
-    errorbar(z(goodFit_forward),meanAmp1(n,bead,goodFit_forward),stdAmp1(n,bead,goodFit_forward),'-');
+    errorbar(z0(goodFit_forward),meanAmp1(n,bead,goodFit_forward),stdAmp1(n,bead,goodFit_forward),'-');
     hold on;
-    errorbar(z(goodFit_forward),meanAmp2(n,bead,goodFit_forward),stdAmp2(n,bead,goodFit_forward),'-r');
+    errorbar(z0(goodFit_forward),meanAmp2(n,bead,goodFit_forward),stdAmp2(n,bead,goodFit_forward),'-r');
     axis tight;
     legend('Lobe 1','Lobe 2');
     xlabel('z position (nm)');
@@ -955,7 +960,7 @@ for n = 1:numFiles
     hold off;
 
     subplot(2,3,5);
-    errorbar(z(goodFit_forward),meanAmpRatio(n,bead,goodFit_forward),stdAmpRatio(n,bead,goodFit_forward),'-');
+    errorbar(z0(goodFit_forward),meanAmpRatio(n,bead,goodFit_forward),stdAmpRatio(n,bead,goodFit_forward),'-');
     hold on;
     axis tight;
     xlabel('z position (nm)');
@@ -963,9 +968,9 @@ for n = 1:numFiles
     hold off;
     
     subplot(2,3,3);
-    errorbar(z(goodFit_forward),meanSigma1(n,bead,goodFit_forward),stdSigma1(n,bead,goodFit_forward),'-');
+    errorbar(z0(goodFit_forward),meanSigma1(n,bead,goodFit_forward),stdSigma1(n,bead,goodFit_forward),'-');
     hold on;
-    errorbar(z(goodFit_forward),meanSigma2(n,bead,goodFit_forward),stdSigma2(n,bead,goodFit_forward),'-r');
+    errorbar(z0(goodFit_forward),meanSigma2(n,bead,goodFit_forward),stdSigma2(n,bead,goodFit_forward),'-r');
     axis tight;
     legend('Lobe 1','Lobe 2');
     xlabel('z position (nm)');
@@ -973,7 +978,7 @@ for n = 1:numFiles
     hold off;
 
     subplot(2,3,6);
-    errorbar(z(goodFit_forward),meanSigmaRatio(n,bead,goodFit_forward),stdSigmaRatio(n,bead,goodFit_forward),'-');
+    errorbar(z0(goodFit_forward),meanSigmaRatio(n,bead,goodFit_forward),stdSigmaRatio(n,bead,goodFit_forward),'-');
     hold on;
     axis tight;
     xlabel('z position (nm)');
@@ -983,15 +988,20 @@ for n = 1:numFiles
     print(h2,'-dpng',[outputFilePrefix 'bead ' num2str(bead) ' stats_2.png']);
     close(h2);
   
-    %% write calibration parameters to a file
-    save([outputFilePrefix 'calibration.mat'], ...
-        'meanAngles', 'meanX', 'meanY', 'z', 'goodFit_forward', 'goodFit_backward', ...
-        'meanPhotons', 'stddevPhotons');
-
+    %% move 'local' calibration parameters to 'global' array
+    goodFit_f(n,bead,:) = goodFit_forward;
+    goodFit_b(n,bead,:) = goodFit_backward;
+    z(n,bead,:) = z0;
+    
 %     bead
     end
 % n
 end
+
+%% write calibration parameters to a file
+save([outputFilePrefix 'calibration.mat'], ...
+        'meanAngles', 'meanX', 'meanY', 'z','zAngleZero', 'goodFit_f', ...
+        'goodFit_b', 'meanPhotons', 'stddevPhotons');
 
 %% Generate template Stack of a chosen bead 
 
