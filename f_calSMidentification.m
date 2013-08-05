@@ -158,7 +158,7 @@ for stack = selectedFiles
         end
         
         load(calFile);
-        
+        goodFit_forward = squeeze(goodFit_f(1,calBeadIdx,:));
         % compute templates to use based upon fitted DG angles
         templateFrames = interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),...
             1:length(meanAngles(1,calBeadIdx,goodFit_forward)),-60:30:90,'nearest'); %90:-30:-60
