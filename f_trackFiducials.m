@@ -698,7 +698,7 @@ for stack = 1:length(dataFile)
     %% Translate angle into corrected x,y positions and z position
     
     load(calFile);%squeeze(meanAngles(1,calBeadIdx,goodFit_forward)
-    goodFit_forward = squeeze(goodFit_f(1,calBeadIdx,:));
+    goodFit_forward = logical(squeeze(goodFit_f(1,calBeadIdx,:)));
     PSFfits(:,21) = PSFfits(:,14) - interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),squeeze(meanX(1,calBeadIdx,goodFit_forward)),PSFfits(:,16),'spline');
     PSFfits(:,22) = PSFfits(:,15) - interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),squeeze(meanY(1,calBeadIdx,goodFit_forward)),PSFfits(:,16),'spline');
     PSFfits(:,23) = interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),z(1,calBeadIdx,goodFit_forward),PSFfits(:,16),'spline');
