@@ -11,7 +11,7 @@ function [] = tformEvalCluster(iStart,iEnd,iStep,jStart,jEnd,jStep,kStart,kEnd,k
 % if isequal(CPFile,0)
 %     error('User cancelled the program');
 % end
-%% reincorporate later - load(CPPathFile);
+load(CPPathFile);
 
 % iStart = 18;
 % iEnd = 80;
@@ -130,7 +130,7 @@ function [] = tformEvalCluster(iStart,iEnd,iStep,jStart,jEnd,jStep,kStart,kEnd,k
         b = 1;
         a = a + 1;
     end
-    matlabpool close
+%    matlabpool close
     elapsedTime = toc(startTime)
     
     % j = 5:19;
@@ -146,50 +146,50 @@ function [] = tformEvalCluster(iStart,iEnd,iStep,jStart,jEnd,jStep,kStart,kEnd,k
     disp('done with first stage, yo')
     %%
     
-    showAgain = true;
-    while showAgain == true
-        
-        load('EvaluateTransform_3D_workspace.mat');
-        load('FRE', 'FRE')
-        load('TRE', 'TRE')
-        
-        j = jStart:jStep:jEnd;
-        k = kStart:kStep:kEnd;
-        
-        for i = 1:a-1
-            contours = 40;
-            subplot(1,2,1)
-            contourf(k,j,squeeze(FRE(i,:,:)),min(min(squeeze(FRE(i,:,:)))):...
-                (max(max(squeeze(FRE(i,:,:))))-min(min(squeeze(FRE(i,:,:)))))/contours:...
-                max(max(squeeze(FRE(i,:,:)))))
-            title(num2str((i-1)*iStep+iStart))
-            colorbar
-            
-            subplot(1,2,2)
-            contourf(k,j,squeeze(TRE(i,:,:)),min(min(squeeze(TRE(i,:,:)))):...
-                (max(max(squeeze(TRE(i,:,:))))-min(min(squeeze(TRE(i,:,:)))))/contours:...
-                max(max(squeeze(TRE(i,:,:)))))
-            colorbar
-            
-            drawnow
-            waitforbuttonpress
-            %     pause(2)
-        end
-        
-        dlg_title = 'Show again';
-        prompt = {'Would you like to see the output again?'};
-        def =       { 'Yes'  };
-        questiondialog = questdlg(prompt,dlg_title, def);
-        % Handle response
-        switch questiondialog
-            case 'Yes'
-                showAgain = true;
-            case 'No'
-                showAgain = false;
-            case 'Cancel'
-                error('User cancelled the program');
-        end
-    end
+%     showAgain = true;
+%     while showAgain == true
+%         
+%         load('EvaluateTransform_3D_workspace.mat');
+%         load('FRE', 'FRE')
+%         load('TRE', 'TRE')
+%         
+%         j = jStart:jStep:jEnd;
+%         k = kStart:kStep:kEnd;
+%         
+%         for i = 1:a-1
+%             contours = 40;
+%             subplot(1,2,1)
+%             contourf(k,j,squeeze(FRE(i,:,:)),min(min(squeeze(FRE(i,:,:)))):...
+%                 (max(max(squeeze(FRE(i,:,:))))-min(min(squeeze(FRE(i,:,:)))))/contours:...
+%                 max(max(squeeze(FRE(i,:,:)))))
+%             title(num2str((i-1)*iStep+iStart))
+%             colorbar
+%             
+%             subplot(1,2,2)
+%             contourf(k,j,squeeze(TRE(i,:,:)),min(min(squeeze(TRE(i,:,:)))):...
+%                 (max(max(squeeze(TRE(i,:,:))))-min(min(squeeze(TRE(i,:,:)))))/contours:...
+%                 max(max(squeeze(TRE(i,:,:)))))
+%             colorbar
+%             
+%             drawnow
+%             waitforbuttonpress
+%             %     pause(2)
+%         end
+%         
+%         dlg_title = 'Show again';
+%         prompt = {'Would you like to see the output again?'};
+%         def =       { 'Yes'  };
+%         questiondialog = questdlg(prompt,dlg_title, def);
+%         % Handle response
+%         switch questiondialog
+%             case 'Yes'
+%                 showAgain = true;
+%             case 'No'
+%                 showAgain = false;
+%             case 'Cancel'
+%                 error('User cancelled the program');
+%         end
+%     end
     
     
 %     %% Construct a questdlg with three options
@@ -219,76 +219,76 @@ function [] = tformEvalCluster(iStart,iEnd,iStep,jStart,jEnd,jStep,kStart,kEnd,k
 %end
 
 %% Ask for user input
-
-dlg_title = 'Please input the optimal parameters';
-prompt = {  'Number of controlpoints n', ...
-    'kth Neighbor for Gaussian weights sigmas', ...
-    'Global scale factors for Gaussian weights', ...
-    'How many CPU cores? (Leave one core unused, if you want to still use this machine for other stuff'...
-      };
-def = {     '40', ...
-    '7', ...
-    '0.9', ...
-    '3', ...
-    };
-num_lines = 1;
-inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
-
-nControlPoints = str2double(inputdialog{1});
-kthNeighbor = str2double(inputdialog{2});
-globalScale = str2double(inputdialog{3});
-nCores = str2double(inputdialog{4});
+% 
+% dlg_title = 'Please input the optimal parameters';
+% prompt = {  'Number of controlpoints n', ...
+%     'kth Neighbor for Gaussian weights sigmas', ...
+%     'Global scale factors for Gaussian weights', ...
+%     'How many CPU cores? (Leave one core unused, if you want to still use this machine for other stuff'...
+%       };
+% def = {     '40', ...
+%     '7', ...
+%     '0.9', ...
+%     '3', ...
+%     };
+% num_lines = 1;
+% inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+% 
+% nControlPoints = str2double(inputdialog{1});
+% kthNeighbor = str2double(inputdialog{2});
+% globalScale = str2double(inputdialog{3});
+% nCores = str2double(inputdialog{4});
 
 %% Calculate the final transform
-% load('EvaluateTransform_3D_workspace.mat');
-
-matlabpool('open', nCores)
-startTime = tic;
-
-% Beads in PVA from 20120814
-[tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
-    matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
-    'lwquadratic',nControlPoints,'Gaussian',kthNeighbor,globalScale,true);
-
-% Transform from 20120703
+% % load('EvaluateTransform_3D_workspace.mat');
+% 
+% matlabpool('open', nCores)
+% startTime = tic;
+% 
+% % Beads in PVA from 20120814
 % [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
 %     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
-%     'lwquadratic',40,'Gaussian',8,0.6,true);
-
-% [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
-%     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
-%     'lwquadratic',60,'Gaussian',7,0.8,true);
-
-% [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
-%     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
-%     'lwlinear',36,'Gaussian',8,0.8,true);
-
-
-% Complete Set from Initial Calibration
-% [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
-%     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
-%     'lwquadratic',70,'Gaussian',7,1.2,true);
-
-% [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
-%     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
-%     'lwlinear',27,'Gaussian',14,0.6,true);
-
-
-elapsedTime = toc(startTime)
-matlabpool close
-
-deviation = matched_cp_transmitted_trans - matched_cp_reflected(:,5:7);
-mean_deviation = mean(deviation,1)
-std_deviation = std(deviation,1)
-
-saveas(gcf,['Transform_' tform.method '_RegistrationError.fig']);
-saveas(gcf,['Transform_' tform.method '_RegistrationError.png']);
-
-save('EvaluateTransform_3D_workspace.mat');
-save(['3D_Transform_' tform.method '.mat'], 'tform', 'matched_cp_reflected', 'matched_cp_transmitted',...
-    'matched_cp_transmitted_trans','FRE', 'TRE', 'FRE_full', 'TRE_full', 'nCores',...
-    'nControlPoints', 'kthNeighbor', 'globalScale',...
-    'matched_cp_reflected', 'matched_cp_transmitted', 'matched_cp_transmitted_trans');
+%     'lwquadratic',nControlPoints,'Gaussian',kthNeighbor,globalScale,true);
+% 
+% % Transform from 20120703
+% % [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
+% %     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
+% %     'lwquadratic',40,'Gaussian',8,0.6,true);
+% 
+% % [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
+% %     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
+% %     'lwquadratic',60,'Gaussian',7,0.8,true);
+% 
+% % [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
+% %     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
+% %     'lwlinear',36,'Gaussian',8,0.8,true);
+% 
+% 
+% % Complete Set from Initial Calibration
+% % [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
+% %     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
+% %     'lwquadratic',70,'Gaussian',7,1.2,true);
+% 
+% % [tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
+% %     matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
+% %     'lwlinear',27,'Gaussian',14,0.6,true);
+% 
+% 
+% elapsedTime = toc(startTime)
+% matlabpool close
+% 
+% deviation = matched_cp_transmitted_trans - matched_cp_reflected(:,5:7);
+% mean_deviation = mean(deviation,1)
+% std_deviation = std(deviation,1)
+% 
+% saveas(gcf,['Transform_' tform.method '_RegistrationError.fig']);
+% saveas(gcf,['Transform_' tform.method '_RegistrationError.png']);
+% 
+% save('EvaluateTransform_3D_workspace.mat');
+% save(['3D_Transform_' tform.method '.mat'], 'tform', 'matched_cp_reflected', 'matched_cp_transmitted',...
+%     'matched_cp_transmitted_trans','FRE', 'TRE', 'FRE_full', 'TRE_full', 'nCores',...
+%     'nControlPoints', 'kthNeighbor', 'globalScale',...
+%     'matched_cp_reflected', 'matched_cp_transmitted', 'matched_cp_transmitted_trans');
 
 %% Generate Figures
 % load('EvaluateTransform_3D_workspace.mat');
