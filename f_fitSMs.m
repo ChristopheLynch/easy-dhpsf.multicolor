@@ -689,7 +689,7 @@ for stack = selectedFiles % = 1:length(dataFile)
         - interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),...
         squeeze(meanY(1,calBeadIdx,goodFit_forward)),totalPSFfits(:,20),'spline');
     totalPSFfits(:,27) = interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),...
-        z(1,calBeadIdx,goodFit_forward),totalPSFfits(:,20),'spline');
+        squeeze(z(1,calBeadIdx,goodFit_forward)),totalPSFfits(:,20),'spline');
     
     %% output data to external file
     
