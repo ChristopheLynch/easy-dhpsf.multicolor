@@ -39,7 +39,7 @@ function [outputFilePrefix, numBeads] = ...
 dlg_title = 'Set EM Gain';
 prompt = { 'EM Gain (1 if no gain):' }; 
 def = { '300' };
-
+blurSize = 1.5*160/nmPerPixel;
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 
@@ -48,6 +48,8 @@ if EMGain < 1 || isnan(EMGain)
     warning('EMGain should be a number >= 1. Setting to 1...');
     EMGain = 1;
 end
+
+useWaveSub = 1;
 
 conversionFactor = conversionGain/EMGain;
 ampRatioLimit = 0.5;
@@ -262,11 +264,15 @@ for a=1:size(sifLogData,1)-2
     ROI(1):ROI(1)+ROI(3)-1);
 
     % subtract the background and continue
-    bkgndImg = f_waveletBackground(data);
+    if useWaveSub
+        bkgndImg = f_waveletBackground(data);
+    else
+        bkgndImg = repmat(mean(data(:)),size(data));
+    end
     data = data - bkgndImg;
 
     % blur data for more robust peak finding
-    dataBlur = imfilter(data, fspecial('gaussian', size(data), 1.5), 'same', 'conv');
+    dataBlur = imfilter(data, fspecial('gaussian', size(data), blurSize), 'same', 'conv');
 
 
     %% do fitting to extract exact locations of DH-PSFs
