@@ -49,6 +49,7 @@ if EMGain < 1 || isnan(EMGain)
     EMGain = 1;
 end
 
+% whether to use wavelet background subtraction, or subtract mean of image
 useWaveSub = 1;
 
 conversionFactor = conversionGain/EMGain;
@@ -1007,8 +1008,36 @@ end
 %% write calibration parameters to a file
 save([outputFilePrefix 'calibration.mat'], ...
         'meanAngles', 'meanX', 'meanY', 'z','zAngleZero', 'goodFit_f', ...
-        'goodFit_b', 'meanPhotons', 'stddevPhotons');
+        'goodFit_b', 'meanPhotons', 'stddevPhotons','stdX','stdY',...
+        'stddevAngles','meanInterlobeDistance','stdInterlobeDistance',...
+        'meanAmpRatio','stdAmpRatio');
 
+    
+    meanX(n, bead,step) = mean(x(goodFit));
+        stdX(n,bead,step) = std(x(goodFit));
+        meanY(n,bead,step) = mean(y(goodFit));
+        stdY(n,bead,step) = std(y(goodFit));
+        meanAngles(n,bead,step) = mean(angles(goodFit));
+        stddevAngles(n,bead,step) = std(angles(goodFit));
+        meanPhotons(n,bead,step) = mean(numPhotons(goodFit));
+        stddevPhotons(n,bead,step) = std(numPhotons(goodFit));
+        numGoodFrames(n,bead,step) = length(angles(goodFit));
+        
+        meanInterlobeDistance(n,bead,step) = mean(lobeDist(goodFit));
+        stdInterlobeDistance(n,bead,step) = std(lobeDist(goodFit));
+        meanAmp1(n,bead,step) = mean(amp1(goodFit));
+        stdAmp1(n,bead,step) = std(amp1(goodFit));
+        meanAmp2(n,bead,step) = mean(amp2(goodFit));
+        stdAmp2(n,bead,step) = std(amp2(goodFit)); 
+        meanSigma1(n,bead,step) = mean(sigma1(goodFit));
+        stdSigma1(n,bead,step) = std(sigma1(goodFit));
+        meanSigma2(n,bead,step) = mean(sigma2(goodFit));
+        stdSigma2(n,bead,step) = std(sigma2(goodFit));
+        meanAmpRatio(n,bead,step) = mean(ampRatio(goodFit));
+        stdAmpRatio(n,bead,step) = std(ampRatio(goodFit));       
+        meanSigmaRatio(n,bead,step) = mean(sigmaRatio(goodFit));
+        stdSigmaRatio(n,bead,step) = std(sigmaRatio(goodFit)); 
+    
 %% Generate template Stack of a chosen bead 
 
 templateSize = 2*round(10*160/nmPerPixel);  % 26;
