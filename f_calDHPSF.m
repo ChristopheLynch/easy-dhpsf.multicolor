@@ -141,7 +141,14 @@ dataAvg = dataAvg/190 - darkAvg;
 
 hROI=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
 imagesc(dataAvg);axis image;colormap hot;
-ROI = imrect(gca,[1 1 128 128]);
+% ROI = imrect(gca,[1 1 128 128]);
+if channel == 'g'
+    ROI = imrect(gca,[1 1 64 64]);
+elseif channel == 'r'
+    ROI = imrect(gca,[243 243 64 64]);
+else
+    ROI = imrect(gca,[1 1 64 64]);
+end
 title({'Shape box and double-click to choose region of interest for PSF fitting' ...
     mat2str(ROI.getPosition)});
 addNewPositionCallback(ROI,@(p) title({'Double-click to choose region of interest for PSF fitting' ...

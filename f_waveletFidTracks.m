@@ -60,7 +60,7 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
             prompt = {'level of x decomposition',...
                 'x wavelet basis','x coefficient threshold'};
             name = 'Input for x track wavelet desomposition';
-            defaultans = {'3','db3','50'};
+            defaultans = {'5','db3','50'};
 
             input = inputdlg(prompt,name,1,defaultans);
             close
@@ -82,7 +82,7 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
 
             figure, plot(xfid,'r')
             hold on
-            plot(xfid_filt,'k')
+            plot(xfid_filt,'k','LineWidth',2)
             set(gcf, 'Position', get(0,'Screensize')); % Maximize figure
             legend('x raw track','x filtered track')
             title('Inspect overlay. Press any key to continue')
@@ -120,7 +120,7 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
             prompt = {'level of y decomposition',...
                 'y wavelet basis','y coefficient threshold'};
             name = 'Input for y track wavelet desomposition';
-            defaultans = {'3','db3','50'};
+            defaultans = {'5','db3','50'};
 
             input = inputdlg(prompt,name,1,defaultans);
             close
@@ -142,7 +142,7 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
 
             figure, plot(yfid,'r')
             hold on
-            plot(yfid_filt,'k')
+            plot(yfid_filt,'k','LineWidth',2)
             set(gcf, 'Position', get(0,'Screensize')); % Maximize figure
             legend('y raw track','y filtered track')
             title('Inspect overlay. Press any key to continue')
@@ -180,7 +180,7 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
             prompt = {'level of z decomposition',...
                 'z wavelet basis','z coefficient threshold'};
             name = 'Input for z track wavelet desomposition';
-            defaultans = {'3','db3','50'};
+            defaultans = {'5','db3','50'};
 
             input = inputdlg(prompt,name,1,defaultans);
             close
@@ -202,7 +202,7 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
 
             figure, plot(zfid,'r')
             hold on
-            plot(zfid_filt,'k')
+            plot(zfid_filt,'k','LineWidth',2)
             set(gcf, 'Position', get(0,'Screensize')); % Maximize figure
             legend('z raw track','z filtered track')
             title('Inspect overlay. Press any key to continue')
@@ -232,15 +232,15 @@ function [xfid_filt,yfid_filt,zfid_filt] = f_waveletFidTracks(xfid,yfid,zfid,Fas
         %%
         %fast version: enter one set of paramaters for all tracks
 
-        dec = 6; %decomposition level
+        dec = [5,5,5]; %decomposition level
         basis = 'db3'; %wavelet basis
         thr = 50; %threshold for coefficient absolute value
 
 
         %wavelet decomposition
-        [Cx,Lx] = wavedec(xfid_nonan,dec,basis);
-        [Cy,Ly] = wavedec(yfid_nonan,dec,basis);
-        [Cz,Lz] = wavedec(zfid_nonan,dec,basis);
+        [Cx,Lx] = wavedec(xfid_nonan,dec(1),basis);
+        [Cy,Ly] = wavedec(yfid_nonan,dec(2),basis);
+        [Cz,Lz] = wavedec(zfid_nonan,dec(3),basis);
 
         %compress wavelets with coefficients below threshold. Also preserve low
         %frequency components
