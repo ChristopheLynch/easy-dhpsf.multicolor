@@ -32,14 +32,15 @@ function [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = ...
 numSyncFrames = 25;
 useDenoising = 1;
 
-if useFidCorrections
 
+if length(fidFilePrefix) ~= 0
     %% load raw fiduciary data
+    % [fidFile fidPath] = uigetfile({'*.mat';'*.*'},'Open data file #1 with raw fiduciary fits');
     for fileNum=1:length(fidFilePrefix)
         %         fidFiles = [fidFiles; {[fidPath fidFile]}];
         % load data
         load([fidFilePrefix{fileNum} 'raw fits.mat'],'PSFfits','numFrames','numMoles');
-
+        
         if fileNum == 1
             tempPSFfits = PSFfits(:,1:23);
             numFramesInFiles = numFrames;
@@ -48,7 +49,7 @@ if useFidCorrections
             PSFfits(:,1) = PSFfits(:,1) + sum(numFramesInFiles(1:fileNum-1));
             tempPSFfits = [tempPSFfits; PSFfits(:,1:23)];
         end
-
+        
         %         fileNum = fileNum+1;
         %         [fidFile fidPath] = uigetfile({'*.mat';'*.*'},...
         %             ['Open data file #' num2str(fileNum) ' with raw fiduciary fits']);
@@ -56,31 +57,35 @@ if useFidCorrections
     PSFfits = tempPSFfits;
     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
-
+    
     fidTrackX = NaN(size(PSFfits,1),numMoles);
     fidTrackY = NaN(size(PSFfits,1),numMoles);
     fidTrackZ = NaN(size(PSFfits,1),numMoles);
-
+    
 
     for molecule = 1:numMoles
         % extract fitting parameters for this molecule
         moleculeFitParam = PSFfits(PSFfits(:,2) == molecule, :);
-
+        
         goodFitFlag(:,molecule) = moleculeFitParam(:,13);
         goodFit = goodFitFlag(:,molecule) > 0;
-
+        
         % raw positions of the fiducial tracks
         fidTrackX(goodFit,molecule) = moleculeFitParam(goodFit,21);
         fidTrackY(goodFit,molecule) = moleculeFitParam(goodFit,22);
         fidTrackZ(goodFit,molecule) = moleculeFitParam(goodFit,23);
         %     numPhotons(:,molecule) = moleculeFitParam(:,17);
-
-
+        
+        
     end
+else
+    fidTrackX = NaN;
+    fidTrackY = NaN;
+    fidTrackZ = NaN;
+end
 
 
-%%
-    % compute movement of fiduciaries
+    %% compute movement of fiduciaries
     devX = zeros(numFrames,numMoles);
     devY = zeros(numFrames,numMoles);
     devZ = zeros(numFrames,numMoles);
@@ -138,6 +143,7 @@ if useFidCorrections
     tempAvgDevZ = avgDevZ./numValidFits;
     
 end
+
 
 if exist('tempAvgDevX','var')
     %     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
