@@ -472,7 +472,7 @@ for stack = selectedFiles
     totalPSFfits = zeros(10000, 6+15+3);
     numPSFfits = 0;
     startTime = tic;
-    frameNum = 1;
+%     frameNum = 1;
     for c = frames(end:-1:1);
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;

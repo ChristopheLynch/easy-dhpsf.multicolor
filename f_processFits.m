@@ -416,7 +416,7 @@ while anotherpass == true
 
     end
     clear corrzRange
-    zLoc = zLoc * nSample/nOil;
+    zLoc_IndexCorrected = zLoc * nSample/nOil;
     numPhotons = catPSFfits(goodFits,21);
 %     meanBkgnd = totalPSFfits(goodFits,15)*conversionFactor;
     meanBkgnd = catPSFfits(goodFits,15);  % output from template match is already in units of photons.
@@ -467,6 +467,7 @@ while anotherpass == true
     xLoc = xLoc(validPoints);
     yLoc = yLoc(validPoints);
     zLoc = zLoc(validPoints);
+    zLoc_IndexCorrected = zLoc_IndexCorrected(validPoints);
 %     [std(xLoc) std(yLoc) std(zLoc)]
     numPhotons = numPhotons(validPoints);
     meanBkgnd = meanBkgnd(validPoints);
@@ -569,8 +570,8 @@ while anotherpass == true
     h3Dfig = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','k','renderer','opengl', 'Toolbar', 'figure');
     if whiteLightFile~=0
         %imagesc(xRange,yRange,whiteLight);axis image;colormap gray;hold on;
-        [x,y,z] = meshgrid(xRange,yRange,[min(zLoc) max(zLoc)]);
-        xslice = []; yslice = []; zslice = min(zLoc);
+        [x,y,z] = meshgrid(xRange,yRange,[min(zLoc_IndexCorrected) max(zLoc_IndexCorrected)]);
+        xslice = []; yslice = []; zslice = min(zLoc_IndexCorrected);
         h=slice(x,y,z,repmat(whiteLight,[1 1 2]),xslice,yslice,zslice,'nearest');
         set(h,'EdgeColor','none','FaceAlpha',0.75);
         colormap gray; hold on;
@@ -578,7 +579,7 @@ while anotherpass == true
     
     if useTimeColors == 0
         % plot is faster than scatter
-        plot3(xLoc,yLoc,zLoc,'.','MarkerSize',scatterSize/3,...
+        plot3(xLoc,yLoc,zLoc_IndexCorrected,'.','MarkerSize',scatterSize/3,...
             'Color',[1 1 0]);
     %     scatter3(xLoc,yLoc,zLoc,scatterSize,[1 1 0],'filled');
     else
@@ -591,7 +592,7 @@ while anotherpass == true
         %     end
         
         for a = 1:length(frameNum)
-            scatter3(xLoc(a),yLoc(a),zLoc(a),scatterSize,'filled',...
+            scatter3(xLoc(a),yLoc(a),zLoc_IndexCorrected(a),scatterSize,'filled',...
                 'MarkerFaceColor', markerColors(frameNum(a)-frameNum(1)+1,:),...
                 'MarkerEdgeColor', markerColors(frameNum(a)-frameNum(1)+1,:));
         end
@@ -671,7 +672,7 @@ end
 savePath = [savePath saveFile '/'];
 mkdir(savePath);
 if ~isequal(saveFile,0)
-    save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
+    save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','zLoc_IndexCorrected','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
         'wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ');
 end

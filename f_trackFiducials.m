@@ -35,10 +35,11 @@ function [outputFilePrefix] = f_trackFiducials(dataFile,dataPath,calFile,calBead
 % sigmaBounds = [1.0 3.0] * 125.78 / nmPerPixel;
 
 conversionFactor = conversionGain/EMGain;
+% lobeDistBounds(2) = 10;
 
 % sigmaBounds = [1.0 3.0];       % sets [min max] allowed sigma for double Gaussian fit (in units of pixels)
 % lobeDistBounds = [6.0 10.0];   % sets [min max] allowed interlobe distance for double Gaussian fit (in units of pixels)
-ampRatioLimit = 0.4;            % sets maximum allowed amplitude ratio
+ampRatioLimit = 0.7;            % sets maximum allowed amplitude ratio
 sigmaRatioLimit = 0.3;          % sets maximum allowed sigma ratio
 
 scrsz = get(0,'ScreenSize');
@@ -48,6 +49,9 @@ options = optimset('FunValCheck','on','Diagnostics','off','Jacobian','on', 'Disp
 %    'FinDiffType','central','DerivativeCheck','on');
 
 outputFilePrefix = cell(1,length(dataFile));
+
+% sets absolute frame number for relating data to sequence log
+absFrameNum = 1;
 
 for stack = 1:length(dataFile)
     
@@ -146,9 +150,9 @@ for stack = 1:length(dataFile)
         hROI = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         imagesc(dataAvg);axis image;colormap hot;
         if channel == 'g' || channel == '0'
-            ROI = imrect(gca,[1 1 128 128]);
+            ROI = imrect(gca,[1 1 64 64]);
         elseif channel == 'r'
-            ROI = imrect(gca,[243 243 128 128]);
+            ROI = imrect(gca,[243 243 64 64]);
         end
         
         title({'Double-click to choose region of interest for PSF extraction' ...
@@ -271,29 +275,40 @@ for stack = 1:length(dataFile)
     numPSFfits = 0;
     bkgndFits = zeros(numFrames,8);
     startTime = tic;
-    %     meanData = zeros(200,1)
-    %     meanBGsubData = zeros(200,1)
     imgHeight = ROI(4);
     imgWidth = ROI(3);
-    
-    %% Identify frames to analyze
-    
-    %     if ~isequal(logPath,0)
-    %         sifLogData =  importdata([logPath logFile{stack}]);
-    %         sifLogData = sifLogData(1:numFrames,:);
-    %         if channel == 'g'
-    %             selectedFrames = find(sifLogData(:,2) == 1);
-    %         elseif channel == 'r'
-    %             selectedFrames = find(sifLogData(:,3) == 1);
-    %         end
-    %     else
-    %         selectedFrames = frames;
-    %     end
-    selectedFrames = frames;
+
+    %% Identify frames to analyze based on the sequence log
+    % load data and register sequence log to data frames
+    if ~isequal(logPath,0)
+        if length(logFile) == length(dataFile) % if one sif file/data file
+            sifLogData =  importdata([logPath logFile{stack}]);
+            sifLogData = sifLogData(1:numFrames,:);
+        else % i.e., if only one sif file for all data files
+            sifLogData =  importdata([logPath logFile{1}]);
+            sifLogData = sifLogData(absFrameNum:absFrameNum+numFrames-1,:);
+            absFrameNum = absFrameNum + numFrames;
+        end
+        
+        %         if channel == 'g' %&& ~filterCPs   % use an intersect in case frames are limited by user
+        %             frames = intersect(find(sifLogData(:,2) == 1),frames);
+        %         elseif channel == 'r' %&& ~filterCPs
+        %             frames = intersect(find(sifLogData(:,3) == 1),frames);
+        %         end
+        frames_green = intersect(find(sifLogData(:,2) == 1),frames);
+        frames_red = intersect(find(sifLogData(:,3) == 1),frames);
+        selectedFrames = unique(sort([frames_green, frames_red]));
+    end
     
     for a=1:numFrames
+        %     for a=selectedFrames
         
         if ~logical(sum(frames(a)==selectedFrames))
+            for b=1:numMoles
+                rowIdx = (a-1)*numMoles+b;
+                PSFfits(rowIdx,13) = -1100;     % this frame was not analyzed
+                PSFfits(rowIdx,1:2) = [a b];
+            end
             continue
         end
         
@@ -354,8 +369,6 @@ for stack = 1:length(dataFile)
         for b=1:numMoles
             
             rowIdx = (a-1)*numMoles+b;
-            
-            
             dataFT = fft2(data,cropHeight,cropWidth);
             maxPeakImg = zeros(cropHeight,cropWidth);
             % matrix PSFLocs stores information about double helices that were
@@ -421,9 +434,17 @@ for stack = 1:length(dataFile)
             
             %% filter out extraneous matches due to very strong signals
             
-            if numPSFLocs > 0
-                % keep only the matches that correspond to the
-                % user-selected coordinates
+            if numPSFLocs == 0
+                    % This error flag indicates that no good PSF candiates
+                    % were found by the template matching given the
+                    % thresholds
+                    PSFfits(rowIdx,13) = -1101;             
+                    PSFfits(rowIdx,1:2) = [a b];
+                    continue;
+                    
+            elseif numPSFLocs > 0
+                % keep only the matches that are within the
+                % coordinates a previous successfil bead fit
                 temp = [];
                 for c=1:size(PSFLocs,1)
                     if (moleLocs(b,1)-PSFLocs(c,1))^2 +(moleLocs(b,2)-PSFLocs(c,2))^2 <= (minDistBetweenSMs)^2
@@ -438,7 +459,12 @@ for stack = 1:length(dataFile)
                     %                 PSFLocs(1,:) = temp(1,:);
                     numPSFLocs = 1;
                 else
-                    numPSFLocs = 0;
+                    % This error flag indicates that the PSF candiates
+                    % were found only too far away from the
+                    % coordinates a previous successfil bead fit
+                    PSFfits(rowIdx,13) = -1102;
+                    PSFfits(rowIdx,1:2) = [a b];
+                    continue
                 end
                 %                 temp = sortrows(PSFLocs(1:numPSFLocs,:),-4);
                 
@@ -545,7 +571,7 @@ for stack = 1:length(dataFile)
                         || fitParam(3)>max(xIdx(:)) || fitParam(5)>max(xIdx(:)) ...
                         || fitParam(4)<min(yIdx(:)) || fitParam(6)<min(yIdx(:)) ...
                         || fitParam(4)>max(yIdx(:)) || fitParam(6)>max(yIdx(:))
-                    PSFfits(rowIdx,13) = -1000;
+                    PSFfits(rowIdx,13) = -1103;
                     PSFfits(rowIdx,1:2) = [a b];
                     continue;
                 end
@@ -565,7 +591,7 @@ for stack = 1:length(dataFile)
                     f_doubleGaussianVector(x,data(yIdx(:,1),xIdx(1,:)),0,xIdx,yIdx),...
                     fitParam,lowerBound,upperBound,options);
                 PSFfits(rowIdx,1:13) = [a b fitParam 0 sum(abs(residual)) exitflag];
-
+                
                 % shift coordinates relative to entire dataset (not just ROI)
                 PSFfits(rowIdx,5) = PSFfits(rowIdx,5) + ROI(1)-1;
                 PSFfits(rowIdx,6) = PSFfits(rowIdx,6) + ROI(2)-1;
@@ -576,11 +602,11 @@ for stack = 1:length(dataFile)
                 % convert from pixels to nm
                 PSFfits(rowIdx,14) = ((fitParam(3)+fitParam(5))/2 + ROI(1)-1)*nmPerPixel;
                 PSFfits(rowIdx,15) = ((fitParam(4)+fitParam(6))/2 + ROI(2)-1)*nmPerPixel;
-         
-%                 % Calculate midpoint between two Gaussian spots
-%                 % convert from pixels to nm
-%                 PSFfits(rowIdx,14) = ((fitParam(3)+fitParam(5))/2)*nmPerPixel;
-%                 PSFfits(rowIdx,15) = ((fitParam(4)+fitParam(6))/2)*nmPerPixel;
+                
+                %                 % Calculate midpoint between two Gaussian spots
+                %                 % convert from pixels to nm
+                %                 PSFfits(rowIdx,14) = ((fitParam(3)+fitParam(5))/2)*nmPerPixel;
+                %                 PSFfits(rowIdx,15) = ((fitParam(4)+fitParam(6))/2)*nmPerPixel;
                 
                 % Below is the calculation of the angle of the two lobes.
                 % Remember that two vertical lobes is focal plane because camera
@@ -620,7 +646,7 @@ for stack = 1:length(dataFile)
                 % Gaussian width Ratio
                 simgaRatio = abs(fitParam(7) - fitParam(8))/sum(fitParam(7:8));
                 PSFfits(b,20) = simgaRatio;
-
+                
                 %% Now evaluate the fits
                 % Conditions for fits (play with these):
                 % (1) Amplitude of both lobes > 0
@@ -663,31 +689,70 @@ for stack = 1:length(dataFile)
                 % if fit was successful, use the computed center location as center
                 % of box for next iteration
                 if PSFfits(rowIdx,13) > 0
-                    moleLocs(b,:) = [round((fitParam(3)+fitParam(5))/2), ...
-                        round((fitParam(4)+fitParam(6))/2)]
-%                     round(PSFfits(rowIdx,14:15)/nmPerPixel);
+                    
+                    
+                    % find previously good fit
+                    index = find(PSFfits(:,13)>0);
+                    % Alternatively, could average a couple of previous
+                    % frames to make distance threshold adjustable on the
+                    % fly
+                    if ~isempty(index) && length(index)>1
+                        
+                        index = index(end-1);
+                        
+                        prevPos = [(PSFfits(index,5)+PSFfits(index,7))/2,...
+                            (PSFfits(index,6)+PSFfits(index,8))/2];
+                        currPos = [(PSFfits(rowIdx,5)+PSFfits(rowIdx,7))/2,...
+                            (PSFfits(rowIdx,6)+PSFfits(rowIdx,8))/2];
+                        euclidDist = sqrt(sum((prevPos - currPos).^2))*nmPerPixel;
+                        
+                        if euclidDist < 400  % maximum allowable XY drift per frame
+                            
+                            %update bead position
+                            moleLocs(b,:) = [round((fitParam(3)+fitParam(5))/2), ...
+                                round((fitParam(4)+fitParam(6))/2)];
+                            
+                            % plot image reconstruction so that fits can be checked
+                            [xIdx yIdx] = meshgrid(1:imgWidth,1:imgHeight);
+                            reconstructImg = reconstructImg + ...
+                                fitParam(1).*exp( -((xIdx-fitParam(3)).^2+(yIdx-fitParam(4)).^2.) / (2.*fitParam(7).^2)) ...
+                                +fitParam(2).*exp( -((xIdx-fitParam(5)).^2+(yIdx-fitParam(6)).^2.) / (2.*fitParam(8).^2));
+                            
+                        else
+                            PSFfits(rowIdx,13) = -1104;     % bead drifted too much
+                        end
+                        
+                    else
+                        %update bead position witout backcheck
+                        moleLocs(b,:) = [round((fitParam(3)+fitParam(5))/2), ...
+                            round((fitParam(4)+fitParam(6))/2)];
+                        
+                        % plot image reconstruction so that fits can be checked
+                        [xIdx yIdx] = meshgrid(1:imgWidth,1:imgHeight);
+                        reconstructImg = reconstructImg + ...
+                            fitParam(1).*exp( -((xIdx-fitParam(3)).^2+(yIdx-fitParam(4)).^2.) / (2.*fitParam(7).^2)) ...
+                            +fitParam(2).*exp( -((xIdx-fitParam(5)).^2+(yIdx-fitParam(6)).^2.) / (2.*fitParam(8).^2));
+                    end
+                    
                 end
                 
-                % plot image reconstruction so that fits can be checked
-                [xIdx yIdx] = meshgrid(1:imgWidth,1:imgHeight);
-                reconstructImg = reconstructImg + ...
-                    fitParam(1).*exp( -((xIdx-fitParam(3)).^2+(yIdx-fitParam(4)).^2.) / (2.*fitParam(7).^2)) ...
-                    +fitParam(2).*exp( -((xIdx-fitParam(5)).^2+(yIdx-fitParam(6)).^2.) / (2.*fitParam(8).^2));
+
             end
             PSFfits(rowIdx,1:2) = [a b];
         end
         
         %%  plot results of template matching and fitting
-        set(0,'CurrentFigure',hMLocs);
-        subplot('Position',[0.025 0.025 .9/2 .95]);
-        imagesc(data);axis image;colormap hot;
-        title(['Frame ' num2str(a) ': raw data - dark counts']);
-        
-        subplot('Position',[0.525 0.025 .9/2 .95]);
-        imagesc(reconstructImg,[min(data(:)) max(data(:))]);axis image;
-        title('Image reconstructed from fitted matches');
-        
-        drawnow;
+        if logical(sum(frames(a)==selectedFrames))
+            set(0,'CurrentFigure',hMLocs);
+            subplot('Position',[0.025 0.025 .9/2 .95]);
+            imagesc(data);axis image;colormap hot;
+            title(['Frame ' num2str(a) ': raw data - dark counts']);
+            
+            subplot('Position',[0.525 0.025 .9/2 .95]);
+            imagesc(reconstructImg,[min(data(:)) max(data(:))]);axis image;
+            title('Image reconstructed from fitted matches');
+            drawnow;
+        end
         
     end
     elapsedTime = toc(startTime);
@@ -732,21 +797,35 @@ for stack = 1:length(dataFile)
     avgDevZ = zeros(numFrames,1);
     numValidFits = zeros(numFrames,1);
     
+%     devX = zeros(length(selectedFrames),numMoles);
+%     devY = zeros(length(selectedFrames),numMoles);
+%     devZ = zeros(length(selectedFrames),numMoles);
+%     goodFitFlag = zeros(length(selectedFrames),numMoles);
+%     numPhotons = zeros(length(selectedFrames),numMoles);
+%     avgDevX = zeros(length(selectedFrames),1);
+%     avgDevY = zeros(length(selectedFrames),1);
+%     avgDevZ = zeros(length(selectedFrames),1);
+%     numValidFits = zeros(length(selectedFrames),1);
+    
     %     textHeader = {'frame number' 'deviation in x (nm)' 'deviation in y (nm)' ...
     %         'deviation in z (nm)' 'good fit flag' 'number of photons'};
     
-    syncFrames = zeros(1,numSyncFrames);
-    lastGoodFrame = numFrames;
-    for a = 1:numSyncFrames
-        while sum(PSFfits(PSFfits(PSFfits(:,1)==lastGoodFrame,13)>0,2)) ~= numMoles/2*(1+numMoles)
-            lastGoodFrame = lastGoodFrame - 1;
-            if lastGoodFrame < 0
-                error('No good frames: check dataset and fit flags')
-            end
-        end
-        syncFrames(a)=lastGoodFrame;
-        lastGoodFrame = lastGoodFrame - 1;
-    end
+%     syncFrames = zeros(1,numSyncFrames);
+%     lastGoodFrame = numFrames;
+%     for a = 1:numSyncFrames
+%         while sum(PSFfits(PSFfits(PSFfits(:,1)==lastGoodFrame,13)>0,2)) ~= numMoles/2*(1+numMoles)
+%             lastGoodFrame = lastGoodFrame - 1;
+%             if lastGoodFrame < 0
+%                 error('No good frames: check dataset and fit flags')
+%             end
+%         end
+%         syncFrames(a)=lastGoodFrame;
+%         lastGoodFrame = lastGoodFrame - 1;
+%     end
+    syncFrames = find(PSFfits(:,13)>0);
+    syncFrames = syncFrames(end-(numSyncFrames-1):end);
+    syncFrames = syncFrames';
+    
     
     for molecule = 1:numMoles
         %% extract fitting parameters for this molecule

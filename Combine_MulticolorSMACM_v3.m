@@ -165,6 +165,7 @@ if ~registrationComplete
     clear numPhotonRange numPhotons prompt questiondialog sigmaBounds
     clear sigmaRatioLimit sigmaX sigmaY sigmaZ transformedData
     clear xLoc yLoc zLoc zRange fidTrackX fidTrackY fidTrackZ
+    % save('workspace.mat');
     
     %% Identify frames based on the sequence log
     % load data and register sequence log to data frames
@@ -206,7 +207,7 @@ if ~registrationComplete
     end
     
     color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
-    figure_h_a = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+    figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
@@ -218,7 +219,6 @@ if ~registrationComplete
             subplot(3,1,1)
             plot(dataSets(i).fidTrackX_transformed, color{i});
             xlabel('frame number');ylabel('X position (nm)');
-            title('Raw red and green channel fiducial tracks after registration')
             hold on
             subplot(3,1,2)
             plot(dataSets(i).fidTrackY_transformed, color{i});
@@ -258,39 +258,25 @@ if ~registrationComplete
 %     plot(nanmean(fidTracksZ,2), 'black');
 %     xlabel('frame number');ylabel('Z position (nm)');
 %     hold off
-
-    h = uicontrol('Position',[20 20 200 40],'String','Continue',...
-        'Callback','uiresume(gcbf)');
-    uiwait(gcf);
         
     %% Pick the appropriate track to use as drift correction
     
     dlg_title = 'Inspect Fiducial Tracks';
     prompt = {'Choose Fiducial Track to denoise and use to correct drift'};
-    questiondialog = questdlg(prompt,dlg_title, 'untransformed', 'transformed', 'Cancel', 'untransformed'  );
+    def =       { 'untransformed'  };
+    questiondialog = questdlg(prompt,dlg_title, def);
     % Handle response
     switch questiondialog
         case 'untransformed'
-                chosenFidTrack = untransformedDataSet;
-        case 'transformed'
                 chosenFidTrack = transformedDataSet;
+        case 'transformed'
+                chosenFidTrack = untransformedDataSet;
         case 'Cancel'
             error('User cancelled the program');
     end
-    
-    
+
     %% Denoise the raw data   
    
-    dlg_title = 'Denoise the tracks';
-    prompt = {'Try to get the smoothest line possible that still represents the drift'};
-    questiondialog = questdlg(prompt,dlg_title, 'Continue', 'Cancel', 'Continue'  );
-    % Handle response
-    switch questiondialog
-        case 'Continue'
-        case 'Cancel'
-            error('User cancelled the program');
-    end
-    
     % Denoise the red illuminated frames 
     fidTracksX_denoised_redFrames = nan(size(fidTracksX,1),size(fidTracksX,2));
     fidTracksY_denoised_redFrames = nan(size(fidTracksX,1),size(fidTracksX,2));
@@ -327,6 +313,7 @@ if ~registrationComplete
         fidTracksY(frames_green,untransformedDataSet),...
         fidTracksZ(frames_green,untransformedDataSet),0);
 
+    save('workspace.mat')
     % Show the piecewise denoised tracks of the chosen channel
     color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
     figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
@@ -341,7 +328,6 @@ if ~registrationComplete
     plot(fidTracksX_denoised_redFrames(:,chosenFidTrack), color{2});
     hold off
     xlabel('frame number');ylabel('X position (nm)');
-    title('Denoised red and green illuminated chosen fiducial track')
     
     subplot(3,1,2)
     plot(fidTracksY_denoised_greenFrames(:,chosenFidTrack), color{1});
@@ -357,9 +343,7 @@ if ~registrationComplete
     hold off
     xlabel('frame number');ylabel('Z position (nm)');
     
-        h = uicontrol('Position',[20 20 200 40],'String','Continue',...
-        'Callback','uiresume(gcbf)');
-    uiwait(gcf);
+    
     
     %% Compute the shifts at the transition Frames
     shiftX =  fidTracksX_denoised_greenFrames(startFrames_green,:) - ...
@@ -371,6 +355,11 @@ if ~registrationComplete
     
     shifts_mean = [nanmean(shiftX,1);nanmean(shiftY,1);nanmean(shiftZ,1)]
     shifts_std = [nanstd(shiftX,1);nanstd(shiftY,1);nanstd(shiftZ,1)]
+    
+%     figure
+%     hist(fidTracksX_denoised_greenFrames(startFrames_green,:) - fidTracksX_denoised_redFrames(endFrames_red,:),20)
+%     hist(fidTracksY_denoised_greenFrames(startFrames_green,:) - fidTracksY_denoised_redFrames(endFrames_red,:),20)
+%     hist(fidTracksZ_denoised_greenFrames(startFrames_green,:) - fidTracksZ_denoised_redFrames(endFrames_red,:),20)
     
     lb = shifts_mean-1.5*shifts_std;
     ub = shifts_mean+1.5*shifts_std;
@@ -389,29 +378,6 @@ if ~registrationComplete
         [std(shiftZ(shiftZ(:,1)>=lb(3,1) & shiftZ(:,1)<=ub(3,1),1)),...
         std(shiftZ(shiftZ(:,2)>=lb(3,2) & shiftZ(:,2)<=ub(3,2),2))]];
     
-    figure_h_c = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
-    set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
-        'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
-        'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
-        'DefaultAxesLineWidth',1.2);
-    
-    subplot(3,1,1)
-    hist(fidTracksX_denoised_greenFrames(startFrames_green,:) - fidTracksX_denoised_redFrames(endFrames_red,:),-150:5:150)
-    xlim([-160 160])
-    legend({'green channel';'red channel'})
-    title('Shift distributions due to changing illumination')
-    subplot(3,1,2)
-    hist(fidTracksY_denoised_greenFrames(startFrames_green,:) - fidTracksY_denoised_redFrames(endFrames_red,:),-150:5:150)
-    xlim([-160 160])
-    legend({'green channel';'red channel'})
-    subplot(3,1,3)
-    hist(fidTracksZ_denoised_greenFrames(startFrames_green,:) - fidTracksZ_denoised_redFrames(endFrames_red,:),-150:5:150)
-    xlim([-160 160])
-    legend({'green channel';'red channel'})
-    
-        h = uicontrol('Position',[20 20 200 40],'String','Continue',...
-        'Callback','uiresume(gcbf)');
-    uiwait(gcf);
     
     %% shift the green illuminated portion of the fiducial tracks to fit the red illuminated portion 
 
@@ -426,9 +392,9 @@ if ~registrationComplete
     fidTracksZ_shifted(frames_green,1) = fidTracksZ(frames_green,1) - shifts_mean_filt(3,1);
     fidTracksZ_shifted(frames_green,2) = fidTracksZ(frames_green,2) - shifts_mean_filt(3,2);
     
-    % Show the illumination induced shifted fiducial tracks to make sure the offsets are taken care of 
+    % Show the chromatic shifted fiducial tracks to make sure the offsets are taken care of 
     color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
-    figure_h_d = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+    figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
@@ -438,7 +404,6 @@ if ~registrationComplete
         subplot(3,1,1)
         plot(fidTracksX_shifted(:,i), color{i});
         xlabel('frame number');ylabel('X position (nm)');
-        title('Corrected fiducial tracks after illumination induced shift correction')
         hold on
         subplot(3,1,2)
         plot(fidTracksY_shifted(:,i), color{i});
@@ -451,18 +416,8 @@ if ~registrationComplete
     end
     hold off
     
-    %% denoise the corrected tracks
+    %% denoise the chromatic shifted tracks
 
-        dlg_title = 'Denoise the tracks';
-    prompt = {'Try to get the smoothest line possible that still represents the drift'};
-    questiondialog = questdlg(prompt,dlg_title, 'Continue', 'Cancel', 'Continue'  );
-    % Handle response
-    switch questiondialog
-        case 'Continue'
-        case 'Cancel'
-            error('User cancelled the program');
-    end
-    
     [fidTracksX_shifted_denoised(:,transformedDataSet),...
         fidTracksY_shifted_denoised(:,transformedDataSet),...
         fidTracksZ_shifted_denoised(:,transformedDataSet)] = f_waveletFidTracks(...
@@ -478,7 +433,7 @@ if ~registrationComplete
     
         % Show the chromatic shifted fiducial tracks and the denoising result 
     color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
-    figure_h_e = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+    figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
@@ -488,7 +443,6 @@ if ~registrationComplete
         subplot(3,1,1)
         plot(fidTracksX_shifted(:,i), color{i});
         xlabel('frame number');ylabel('X position (nm)');
-        title('Corrected fiducial tracks and denoising result')
         hold on
         subplot(3,1,2)
         plot(fidTracksY_shifted(:,i), color{i});
@@ -515,26 +469,19 @@ if ~registrationComplete
     end
     hold off
     
-        h = uicontrol('Position',[20 20 200 40],'String','Continue',...
-        'Callback','uiresume(gcbf)');
-    uiwait(gcf);
 
-    %% Center the last frames of the denoised fiducial track
+    %% Center the last frames of the chosen denoised fiducial track
 
     syncFrames = find(~isnan(fidTracksX(:,1)));
     syncFrames = syncFrames(end-(numSyncFrames-1):end);
 
-    avgDevX(:,1) = fidTracksX_shifted_denoised(:,1) - mean(fidTracksX_shifted_denoised(syncFrames,1),1);
-    avgDevY(:,1) = fidTracksY_shifted_denoised(:,1) - mean(fidTracksY_shifted_denoised(syncFrames,1),1);
-    avgDevZ(:,1) = fidTracksZ_shifted_denoised(:,1) - mean(fidTracksZ_shifted_denoised(syncFrames,1),1);
-    
-    avgDevX(:,2) = fidTracksX_shifted_denoised(:,2) - mean(fidTracksX_shifted_denoised(syncFrames,2),1);
-    avgDevY(:,2) = fidTracksY_shifted_denoised(:,2) - mean(fidTracksY_shifted_denoised(syncFrames,2),1);
-    avgDevZ(:,2) = fidTracksZ_shifted_denoised(:,2) - mean(fidTracksZ_shifted_denoised(syncFrames,2),1);
+    avgDevX = fidTracksX_shifted_denoised(:,:) - mean(fidTracksX_shifted_denoised(syncFrames,:));
+    avgDevY = fidTracksY_shifted_denoised(:,:) - mean(fidTracksY_shifted_denoised(syncFrames,:));
+    avgDevZ = fidTracksZ_shifted_denoised(:,:) - mean(fidTracksZ_shifted_denoised(syncFrames,:));
     
         % Show the drift correction to be applied
     color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
-    figure_h_f = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+    figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
@@ -543,7 +490,6 @@ if ~registrationComplete
         subplot(3,1,1)
         plot(avgDevX(:,chosenFidTrack), color{chosenFidTrack});
         xlabel('frame number');ylabel('X position (nm)');
-        title('Applied drift correction')
 
         subplot(3,1,2)
         plot(avgDevY(:,chosenFidTrack), color{chosenFidTrack});
@@ -552,10 +498,6 @@ if ~registrationComplete
         subplot(3,1,3)
         plot(avgDevZ(:,chosenFidTrack), color{chosenFidTrack});
         xlabel('frame number');ylabel('Z position (nm)');
-        
-            h = uicontrol('Position',[20 20 200 40],'String','Continue',...
-        'Callback','uiresume(gcbf)');
-    uiwait(gcf);
 
         %% Apply fiduciary corrections
 
@@ -588,9 +530,156 @@ if ~registrationComplete
         dataSets(i).zLoc_driftCorr_indexCorr = dataSets(i).zLoc_driftCorr * nSample/nOil;
     end
     
+    
+    %%
+    
+%     %% Center the last frames of the chosen fiducial tracks
+% 
+%     syncFrames = find(~isnan(fidTracksX(:,1)));
+%     syncFrames = syncFrames(end-(numSyncFrames-1):end);
+%     
+%     devX = nan(size(fidTracksX,1),size(fidTracksX,2));
+%     devY = nan(size(fidTracksX,1),size(fidTracksX,2));
+%     devZ = nan(size(fidTracksX,1),size(fidTracksX,2));
+%     avgDevX = nan(size(fidTracksX,1),1);
+%     avgDevY = nan(size(fidTracksX,1),1);
+%     avgDevZ = nan(size(fidTracksX,1),1);
+%     
+%     for bead = 1:size(fidTracksX,2)
+%         
+%         devX(:,bead) = fidTracksX(:,bead) - mean(fidTracksX(syncFrames,bead));
+%         devY(:,bead) = fidTracksY(:,bead) - mean(fidTracksY(syncFrames,bead));
+%         devZ(:,bead) = fidTracksZ(:,bead) - mean(fidTracksZ(syncFrames,bead));
+%         
+%         avgDevX = avgDevX + devX(:,bead);
+%         avgDevY = avgDevY + devY(:,bead);
+%         avgDevZ = avgDevZ + devZ(:,bead);
+%         
+%     end
+%     avgDevX = avgDevX./size(fidTracksX,2);
+%     avgDevY = avgDevY./size(fidTracksX,2);
+%     avgDevZ = avgDevZ./size(fidTracksX,2);
+    
+%     %% Denoise the raw data
+%     fidTracksX_denoised = fidTracksX;
+%     fidTracksY_denoised = fidTracksY;
+%     fidTracksZ_denoised = fidTracksZ;
+%     [fidTracksX_denoised(:,transformedDataSet),...
+%         fidTracksY_denoised(:,transformedDataSet),...
+%         fidTracksZ_denoised(:,transformedDataSet)] = f_waveletFidTracks(...
+%         fidTracksX(:,transformedDataSet),...
+%         fidTracksY(:,transformedDataSet),...
+%         fidTracksZ(:,transformedDataSet),0);
+%     [fidTracksX_denoised(:,untransformedDataSet),...
+%         fidTracksY_denoised(:,untransformedDataSet),...
+%         fidTracksZ_denoised(:,untransformedDataSet)] = f_waveletFidTracks(...
+%         fidTracksX(:,untransformedDataSet),...
+%         fidTracksY(:,untransformedDataSet),...
+%         fidTracksZ(:,untransformedDataSet),1);
+    
+%     %% denoise the shifted data
+%     devX_denoised = devX;
+%     devY_denoised = devY;
+%     devZ_denoised = devZ;
+%     [devX_denoised(:,transformedDataSet),...
+%         devY_denoised(:,transformedDataSet),...
+%         devZ_denoised(:,transformedDataSet)] = f_waveletFidTracks(...
+%         devX(:,transformedDataSet),...
+%         devY(:,transformedDataSet),...
+%         devZ(:,transformedDataSet),0);
+%     [devX_denoised(:,untransformedDataSet),...
+%         devY_denoised(:,untransformedDataSet),...
+%         devZ_denoised(:,untransformedDataSet)] = f_waveletFidTracks(...
+%         devX(:,untransformedDataSet),...
+%         devY(:,untransformedDataSet),...
+%         devZ(:,untransformedDataSet),0);
+    
+    
+%     %% Apply fiduciary corrections
+%     % use only data aquired in the untransformed channel.
+%     % Transformed data may introduce additional noise and systematic offsets
+%     for i = 1:length(dataSets)
+%         dataSets(i).devX = devX(:,i);
+%         dataSets(i).devY = devY(:,i);
+%         dataSets(i).devZ = devZ(:,i);
+%         dataSets(i).devX_denoised = devX_denoised(:,i);
+%         dataSets(i).devY_denoised = devY_denoised(:,i);
+%         dataSets(i).devZ_denoised = devZ_denoised(:,i);
+%         dataSets(i).fidTrackX_denoised = fidTracksX_denoised(:,i);
+%         dataSets(i).fidTrackY_denoised = fidTracksY_denoised(:,i);
+%         dataSets(i).fidTrackZ_denoised = fidTracksZ_denoised(:,i);
+%         % De-noise the fiduciary tracks
+%         % use only data aquired in this channel.  Transformed data may introduce
+%         % additional noise and systematic offsets
+%         if dataSets(i).transformedDataset
+%             dataSets(i).xLoc_driftCorr = dataSets(i).xLoc_transformed - devX_denoised(dataSets(i).frameNum,untransformedDataSet);
+%             dataSets(i).yLoc_driftCorr = dataSets(i).yLoc_transformed - devY_denoised(dataSets(i).frameNum,untransformedDataSet);
+%             dataSets(i).zLoc_driftCorr = dataSets(i).zLoc_transformed - devZ_denoised(dataSets(i).frameNum,untransformedDataSet);
+%         else
+%             dataSets(i).xLoc_driftCorr = dataSets(i).xLoc - devX_denoised(dataSets(i).frameNum,untransformedDataSet);
+%             dataSets(i).yLoc_driftCorr = dataSets(i).yLoc - devY_denoised(dataSets(i).frameNum,untransformedDataSet);
+%             dataSets(i).zLoc_driftCorr = dataSets(i).zLoc - devZ_denoised(dataSets(i).frameNum,untransformedDataSet);
+%         end
+%     end
+    
+
+    
+%     %% Show the decomposed fiducial tracks
+%     color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
+%     figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+%     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
+%         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
+%         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
+%         'DefaultAxesLineWidth',1.2);
+%     
+%     for i = 1:length(dataSets)
+%         if dataSets(i).transformedDataset
+%             subplot(3,1,1)
+%             plot(dataSets(i).fidTrackX_transformed, color{i});
+%             xlabel('frame number');ylabel('X position (nm)');
+%             hold on
+%             subplot(3,1,2)
+%             plot(dataSets(i).fidTrackY_transformed, color{i});
+%             xlabel('frame number');ylabel('Y position (nm)');
+%             hold on
+%             subplot(3,1,3)
+%             plot(dataSets(i).fidTrackZ_transformed, color{i});
+%             xlabel('frame number');ylabel('Z position (nm)');
+%             hold on
+%         else
+%             subplot(3,1,1)
+%             plot(dataSets(i).fidTrackX, color{i});
+%             xlabel('frame number');ylabel('X position (nm)');
+%             hold on
+%             subplot(3,1,2)
+%             plot(dataSets(i).fidTrackY, color{i});
+%             xlabel('frame number');ylabel('Y position (nm)');
+%             hold on
+%             subplot(3,1,3)
+%             plot(dataSets(i).fidTrackZ, color{i});
+%             xlabel('frame number');ylabel('Z position (nm)');
+%             hold on
+%         end
+%         hold on
+%     end
+%     % display the mean track also
+%     subplot(3,1,1)
+%     plot(nanmean(fidTracksX,2), 'black');
+%     xlabel('frame number');ylabel('X position (nm)');
+%     hold off
+%     subplot(3,1,2)
+%     plot(nanmean(fidTracksY,2), 'black');
+%     xlabel('frame number');ylabel('Y position (nm)');
+%     hold off
+%     subplot(3,1,3)
+%     plot(nanmean(fidTracksZ,2), 'black');
+%     xlabel('frame number');ylabel('Z position (nm)');
+%     hold off
+%     
+        
 
     %% Show the difference between the registered fiducial tracks
-    figure_h_g = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+    figure_h_c = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
@@ -649,137 +738,115 @@ if ~registrationComplete
         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_3_D']})
     clear avg
     
-        h = uicontrol('Position',[20 20 200 40],'String','Continue',...
+    %% Show the difference between the denoised and fused fiducial tracks
+    figure_h_d = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+    set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
+        'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
+        'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
+        'DefaultAxesLineWidth',1.2);
+    
+    subplot(4,1,1)
+    plot(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
+    xlabel('frame number');ylabel('X position shift (nm)');
+    avg = nanmean(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
+    stdev = nanstd(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
+    ylim([avg-5*stdev avg+7*stdev])
+    hold on
+    plot(dataSets(2).fidTrack_interpolated_TRE(:,2),'red','LineWidth' ,2)
+    hold off
+    legend({['offset = ' num2str(avg),...
+        ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_x']})
+    title({['Fused Fiducial Tracks (denoised)']})
+    
+    subplot(4,1,2)
+    plot(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
+    xlabel('frame number');ylabel('Y position shift (nm)');
+    avg = nanmean(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
+    stdev = nanstd(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
+    ylim([avg-5*stdev avg+7*stdev])
+    hold on
+    plot(dataSets(2).fidTrack_interpolated_TRE(:,3),'red','LineWidth' ,2)
+    hold off
+    legend({['offset = ' num2str(avg),...
+        ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_y']})
+    
+    subplot(4,1,3)
+    plot(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
+    xlabel('frame number');ylabel('Z position shift (nm)');
+    avg = nanmean(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
+    stdev = nanstd(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
+    ylim([avg-5*stdev avg+7*stdev])
+    hold on
+    plot(dataSets(2).fidTrack_interpolated_TRE(:,4),'red','LineWidth' ,2)
+    hold off
+    legend({['offset = ' num2str(avg),...
+        ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_z']})
+    
+    subplot(4,1,4)
+    euclid_Dist = sqrt(((fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2)).^2)+...
+        ((fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2)).^2+...
+        ((fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2)).^2)));
+    plot(euclid_Dist);
+    xlabel('frame number');ylabel('3D shift (nm)');
+    avg = nanmean(euclid_Dist);
+    stdev = nanstd(euclid_Dist);
+    ylim([0 avg+7*stdev])
+    hold on
+    plot(dataSets(2).fidTrack_interpolated_TRE(:,1),'red','LineWidth' ,2)
+    hold off
+    legend({['offset = ' num2str(avg),...
+        ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_3_D']})
+    clear avg
+    
+    %% Show the fiducial tracks in the same coordinate system
+    figure_h_a = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+    set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
+        'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
+        'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
+        'DefaultAxesLineWidth',1.2);
+    
+    for i = 1:length(dataSets)
+        if dataSets(i).transformedDataset
+            scatter3(dataSets(i).fidTrackX_transformed,...
+                dataSets(i).fidTrackY_transformed,...
+                dataSets(i).fidTrackZ_transformed,...
+                5,'filled', color{i});
+        else
+            scatter3(dataSets(i).fidTrackX,...
+                dataSets(i).fidTrackY,...
+                dataSets(i).fidTrackZ,...
+                5,'filled', color{i});
+        end
+        
+        xlabel('x (nm)');ylabel('y (nm)');zlabel('z (nm)');
+        axis vis3d equal;
+        hold on
+        
+    end
+    hold off
+    
+    h = uicontrol('Position',[20 20 200 40],'String','Continue',...
         'Callback','uiresume(gcbf)');
     uiwait(gcf);
     
- %%   
-%     %% Show the difference between the denoised and fused fiducial tracks
-%     figure_h_h = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
-%     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
-%         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
-%         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
-%         'DefaultAxesLineWidth',1.2);
-%     
-%     subplot(4,1,1)
-%     plot(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
-%     xlabel('frame number');ylabel('X position shift (nm)');
-%     avg = nanmean(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
-%     stdev = nanstd(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
-%     ylim([avg-5*stdev avg+7*stdev])
-%     hold on
-%     plot(dataSets(2).fidTrack_interpolated_TRE(:,2),'red','LineWidth' ,2)
-%     hold off
-%     legend({['offset = ' num2str(avg),...
-%         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_x']})
-%     title({['Fused Fiducial Tracks (denoised)']})
-%     
-%     subplot(4,1,2)
-%     plot(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
-%     xlabel('frame number');ylabel('Y position shift (nm)');
-%     avg = nanmean(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
-%     stdev = nanstd(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
-%     ylim([avg-5*stdev avg+7*stdev])
-%     hold on
-%     plot(dataSets(2).fidTrack_interpolated_TRE(:,3),'red','LineWidth' ,2)
-%     hold off
-%     legend({['offset = ' num2str(avg),...
-%         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_y']})
-%     
-%     subplot(4,1,3)
-%     plot(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
-%     xlabel('frame number');ylabel('Z position shift (nm)');
-%     avg = nanmean(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
-%     stdev = nanstd(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
-%     ylim([avg-5*stdev avg+7*stdev])
-%     hold on
-%     plot(dataSets(2).fidTrack_interpolated_TRE(:,4),'red','LineWidth' ,2)
-%     hold off
-%     legend({['offset = ' num2str(avg),...
-%         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_z']})
-%     
-%     subplot(4,1,4)
-%     euclid_Dist = sqrt(((fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2)).^2)+...
-%         ((fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2)).^2+...
-%         ((fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2)).^2)));
-%     plot(euclid_Dist);
-%     xlabel('frame number');ylabel('3D shift (nm)');
-%     avg = nanmean(euclid_Dist);
-%     stdev = nanstd(euclid_Dist);
-%     ylim([0 avg+7*stdev])
-%     hold on
-%     plot(dataSets(2).fidTrack_interpolated_TRE(:,1),'red','LineWidth' ,2)
-%     hold off
-%     legend({['offset = ' num2str(avg),...
-%         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_3_D']})
-%     clear avg
-%     
-%     %% Show the fiducial tracks in the same coordinate system
-%     figure_h_i = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
-%     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
-%         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
-%         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
-%         'DefaultAxesLineWidth',1.2);
-%     
-%     for i = 1:length(dataSets)
-%         if dataSets(i).transformedDataset
-%             scatter3(dataSets(i).fidTrackX_transformed,...
-%                 dataSets(i).fidTrackY_transformed,...
-%                 dataSets(i).fidTrackZ_transformed,...
-%                 5,'filled', color{i});
-%         else
-%             scatter3(dataSets(i).fidTrackX,...
-%                 dataSets(i).fidTrackY,...
-%                 dataSets(i).fidTrackZ,...
-%                 5,'filled', color{i});
-%         end
-%         
-%         xlabel('x (nm)');ylabel('y (nm)');zlabel('z (nm)');
-%         axis vis3d equal;
-%         hold on
-%         
-%     end
-%     hold off
-%     
-%     h = uicontrol('Position',[20 20 200 40],'String','Continue',...
-%         'Callback','uiresume(gcbf)');
-%     uiwait(gcf);
-%     
     %% prompt to save bead registration figures
     [saveFile, savePath] = uiputfile({'*.*'},'Enter a directory title for this ROI. Otherwise, click cancel.');
     savePath = [savePath saveFile '/'];
     mkdir(savePath);
     
-    
-    
-    
-    saveas(figure_h_a,[savePath 'XYZFidTracks_raw.fig']);
-    saveas(figure_h_a,[savePath 'XYZFidTracks_raw.png']);
+    saveas(figure_h_a,[savePath '3DFidCorrelation.fig']);
+    saveas(figure_h_a,[savePath '3DFidCorrelation.png']);
     close(figure_h_a)
-    saveas(figure_h_b,[savePath 'XYZFidTracks_piecewiseDenoised.fig']);
-    saveas(figure_h_b,[savePath 'XYZFidTracks_piecewiseDenoised.png']);
+    saveas(figure_h_b,[savePath 'XYZFidTracks.fig']);
+    saveas(figure_h_b,[savePath 'XYZFidTracks.png']);
     close(figure_h_b)
-    saveas(figure_h_c,[savePath 'ChromaticShiftDist.fig']);
-    saveas(figure_h_c,[savePath 'ChromaticShiftDist.png']);
+    saveas(figure_h_c,[savePath 'XYZFidMisregistration.fig']);
+    saveas(figure_h_c,[savePath 'XYZFidMisregistration.png']);
     close(figure_h_c)
-    saveas(figure_h_d,[savePath 'XYZFidTracks_corrected.fig']);
-    saveas(figure_h_d,[savePath 'XYZFidTracks_corrected.png']);
+    saveas(figure_h_d,[savePath 'XYZFidMisregistration_denoised.fig']);
+    saveas(figure_h_d,[savePath 'XYZFidMisregistration_denoised.png']);
     close(figure_h_d)
-    saveas(figure_h_e,[savePath 'XYZFidTracks_correctedDenoised.fig']);
-    saveas(figure_h_e,[savePath 'XYZFidTracks_correctedDenoised.png']);
-    close(figure_h_e)
-    saveas(figure_h_f,[savePath 'AppliedDriftCorrection.fig']);
-    saveas(figure_h_f,[savePath 'AppliedDriftCorrection.png']);
-    close(figure_h_f)
-    saveas(figure_h_g,[savePath 'XYZFidMisregistration.fig']);
-    saveas(figure_h_g,[savePath 'XYZFidMisregistration.png']);
-    close(figure_h_g)
-%     saveas(figure_h_h,[savePath 'XYZFidMisregistration_denoised.fig']);
-%     saveas(figure_h_h,[savePath 'XYZFidMisregistration_denoised.png']);
-%     close(figure_h_h)
-%     saveas(figure_h_i,[savePath '3DFidCorrelation.fig']);
-%     saveas(figure_h_i,[savePath '3DFidCorrelation.png']);
-%     close(figure_h_i)  
+    
 
     
     %% Clean up
@@ -790,12 +857,6 @@ if ~registrationComplete
     tform.matched_cp_reflected = matched_cp_reflected;
     tform.matched_cp_transmitted = matched_cp_transmitted	;
     tform.matched_cp_transmitted_trans = matched_cp_transmitted_trans;
-    
-    % Need to clean up further
-    fidCorrData.avgDevX = avgDevX;
-    
-    
-    
     registrationComplete = true
     
     clear FRE TRE FRE_full TRE_full matched_cp_reflected matched_cp_transmitted matched_cp_transmitted_trans
