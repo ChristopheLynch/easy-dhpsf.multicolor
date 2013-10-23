@@ -129,7 +129,7 @@ s.channel = '0';
 s.sigmaBounds = [1.0 1.5];
 % [minSpacing maxSpacing] between the two spots of the DHPSF, units of
 % pixels relative to the original value of 160 nm / pix
-s.lobeDistBounds = [3.5 7]*160/s.nmPerPixel;   %[3.5 10]*160/s.nmPerPixel;
+s.lobeDistBounds = [3.5 8]*160/s.nmPerPixel;   %[3.5 10]*160/s.nmPerPixel;
 % half-width of box to extract when fitting DHPSF images, units of integer pixels
 s.boxRadius = round(7*160/s.nmPerPixel);
 % smoothing filter width for identifying DHPSF SMs, units of pixels
