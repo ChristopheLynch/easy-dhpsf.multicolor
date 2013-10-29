@@ -298,6 +298,8 @@ for stack = 1:length(dataFile)
         frames_green = intersect(find(sifLogData(:,2) == 1),frames);
         frames_red = intersect(find(sifLogData(:,3) == 1),frames);
         selectedFrames = unique(sort([frames_green, frames_red]));
+    else
+        selectedFrames=frames; % **temp** workaround from rev 43!
     end
     
     for a=1:numFrames
@@ -766,7 +768,7 @@ for stack = 1:length(dataFile)
     goodFit_forward = logical(squeeze(goodFit_f(1,calBeadIdx,:)));
     PSFfits(:,21) = PSFfits(:,14) - interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),squeeze(meanX(1,calBeadIdx,goodFit_forward)),PSFfits(:,16),'spline');
     PSFfits(:,22) = PSFfits(:,15) - interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),squeeze(meanY(1,calBeadIdx,goodFit_forward)),PSFfits(:,16),'spline');
-    PSFfits(:,23) = interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),z(1,calBeadIdx,goodFit_forward),PSFfits(:,16),'spline');
+    PSFfits(:,23) = interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),squeeze(z(1,calBeadIdx,goodFit_forward)),PSFfits(:,16),'spline');
     
     %% Output raw fit data
     
