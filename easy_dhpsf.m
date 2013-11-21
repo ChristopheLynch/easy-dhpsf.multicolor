@@ -417,7 +417,8 @@ set(hfig,'Visible','on');
             set(hbuttonThreshRun,'Enable','on');
             popupChoices = num2str(1:s.numCalBeads,'%g|');
             set(hpopupCalSel,'Enable','on',...
-                'String',popupChoices(1:length(popupChoices)-1));
+                'String',popupChoices(1:length(popupChoices)-1),...
+                'Value',s.calBeadIdx);
             imagesc(squeeze(s.templateImgs(round(size(s.templateImgs,1)/2),:,:)),'parent',haxesCalImg);
             axis(haxesCalImg,'image');
             axis(haxesCalImg,'off');
