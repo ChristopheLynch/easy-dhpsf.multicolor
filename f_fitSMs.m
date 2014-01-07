@@ -109,7 +109,7 @@ inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 for i = 1:length(selectedFiles)
     framesAll{i} = str2num(inputdialog{i});
 end
-findLaserInt = strcmp(inputdialog{end},'Yes');
+findLaserInt = ~strcmp(inputdialog{end},'No');
 
 % This information should be passed from the earlier execution of
 % this code in f_calSMidentification, but we get another chance to
