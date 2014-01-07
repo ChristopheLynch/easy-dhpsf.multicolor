@@ -33,7 +33,7 @@ numSyncFrames = 25;
 useDenoising = 1;
 
 
-if length(fidFilePrefix) ~= 0
+if useFidCorrections
     %% load raw fiduciary data
     % [fidFile fidPath] = uigetfile({'*.mat';'*.*'},'Open data file #1 with raw fiduciary fits');
     for fileNum=1:length(fidFilePrefix)
@@ -84,7 +84,7 @@ else
     fidTrackZ = NaN;
 end
 
-
+if useFidCorrections
     %% compute movement of fiduciaries
     devX = zeros(numFrames,numMoles);
     devY = zeros(numFrames,numMoles);
