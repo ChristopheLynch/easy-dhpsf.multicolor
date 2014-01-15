@@ -26,12 +26,22 @@
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = ...
-    f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix)
+    f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix,logFile,logPath,channel)
 %clear all;
 % close all;
 numSyncFrames = 25;
 useDenoising = 1;
 
+% Can use sif logs to filter which frames are included for fiducial correction.
+% If logPath set to 0, all frames are used (every frame with a visible fiducial,
+% even when the 'wrong' laser is on).
+% Set to 0 because it is not clear that using filtering is ideal: sometimes 
+% using the frames with the 'wrong laser' can introduce a slight bias, but 
+% sometimes (especially for z traces) having extra frames is worth it,
+% unless we can find a good way for waveletFidTracks to 'estimate' what's
+% going on in large gaps
+
+logFile=0; logPath=0; channel=[];
 
 if useFidCorrections
     %% load raw fiduciary data
@@ -62,13 +72,30 @@ if useFidCorrections
     fidTrackY = NaN(size(PSFfits,1),numMoles);
     fidTrackZ = NaN(size(PSFfits,1),numMoles);
     
+    
 
     for molecule = 1:numMoles
         % extract fitting parameters for this molecule
         moleculeFitParam = PSFfits(PSFfits(:,2) == molecule, :);
         
+        % only use good fits as defined by fitting function
         goodFitFlag(:,molecule) = moleculeFitParam(:,13);
         goodFit = goodFitFlag(:,molecule) > 0;
+        
+        % only use fits that have correct laser on (from sif log)
+        if ischar(logFile)
+            logFile = cellstr(logFile);
+        end
+        if ~isequal(logPath,0) % assuming only one sif for whole fiducial track
+            sifLogData =  importdata([logPath logFile{1}]);
+            %sifLogData = sifLogData(absFrameNum:absFrameNum+numFrames-1,:);
+            %absFrameNum = numFrames;
+            if channel == 'g'
+                goodFit = sifLogData(:,2) == 1 & goodFit;
+            elseif channel == 'r'
+                goodFit = intersect(sifLogData(:,3) == 1,goodFit);
+            end
+        end
         
         % raw positions of the fiducial tracks
         fidTrackX(goodFit,molecule) = moleculeFitParam(goodFit,21);
@@ -115,6 +142,23 @@ if useFidCorrections
         
         goodFitFlag(:,molecule) = moleculeFitParam(:,13);
         goodFit = goodFitFlag(:,molecule) > 0;
+        
+        % only use fits that have correct laser on (from sif log)
+        % same format as for fidTrackX/Y/Z, but redundant in case that is
+        % changed
+        if ischar(logFile)
+            logFile = cellstr(logFile);
+        end
+        if ~isequal(logPath,0) % assuming only one sif for whole fiducial track
+            sifLogData =  importdata([logPath logFile{1}]);
+            %sifLogData = sifLogData(absFrameNum:absFrameNum+numFrames-1,:);
+            %absFrameNum = numFrames;
+            if channel == 'g'
+                goodFit = sifLogData(:,2) == 1 & goodFit;
+            elseif channel == 'r'
+                goodFit = intersect(sifLogData(:,3) == 1,goodFit);
+            end
+        end
         
         % compute deviation with respect to bead location averaged over last
         % numSyncFrames frames of the movie

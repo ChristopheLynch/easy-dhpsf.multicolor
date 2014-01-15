@@ -119,7 +119,7 @@ s.smacmEMGain = 300;
 % photons/count, camera setting, global to all modules
 s.conversionGain = 26.93; %8A % 24.7; % 8B
 % imaging system property, global to all modules
-s.nmPerPixel = 125.78; % 8A% 160; %8B
+s.nmPerPixel = 120.18; % old value is 125.78 % 8A% 160; %8B
 % channel identifier
 s.channel = '0';
 % [minWidth maxWidth] of the two spots of the DHPSF, units of pixels
@@ -663,7 +663,7 @@ set(hfig,'Visible','on');
         updateGUI;
     end
     function buttonFitDebug_Callback(~,~) 
-        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
+        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
         f_debugMoleculeFits(totalPSFfits)
         updateGUI;
     end
@@ -688,7 +688,7 @@ set(hfig,'Visible','on');
             'x fid-corrected (nm),y fid-corrected (nm), z fid-corrected (nm),'...
             'photons detected,mean background photons\n']);
         fclose(fid);
-        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
+        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
         goodFit = totalPSFfits(:,17)>0;
         dlmwrite([csvPath csvFile],totalPSFfits(goodFit,[1 2 25 26 27 28 29 30 21 15]),...
             '-append');
@@ -696,19 +696,25 @@ set(hfig,'Visible','on');
         updateGUI;
     end
     function buttonOutScatter_Callback(~,~) 
-        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
+        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
         f_scatter3(totalPSFfits,s.useFids);
         
         updateGUI;
     end
     function buttonOutHist_Callback(~,~) 
-        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
+        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
         f_hist2(totalPSFfits,s.useFids);
         
         updateGUI;
     end
     function buttonOutReg_Callback(~,~)
-        [totalPSFfits,numFrames, fidTrackX, fidTrackY, fidTrackZ] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix);
+        % fidTrackX,fidTrackY,fidTrackZ are used to keep fid data separate
+        % for 2-color processing. That is, when recombining the channels,
+        % the uncorrected localizations are transformed, the tracks are
+        % transformed, and finally the transformed localizations and tracks
+        % are subtracted to perform fiducial correction. You must still check
+        % the 'use fiducials' box (as of rev 48).
+        [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
 %         [matFile, matPath] = uiputfile({'*.mat';'*.*'},'Save localizations as old-style .mat file');
 %         if isequal(matFile,0)
 %             return;
