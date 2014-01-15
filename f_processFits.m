@@ -395,6 +395,7 @@ while anotherpass == true
     % transformation to the z position)
     corrzRange = zRange * nOil/nSample;
     
+    % extract data; check if fiducial correction is in play (i.e., col 30 exists)
     if sum(isnan(catPSFfits(:,30))) ~= size(catPSFfits,1)
         goodFits = goodFits & catPSFfits(:,30) >= corrzRange(1) & catPSFfits(:,30) <= corrzRange(2);
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
