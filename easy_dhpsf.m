@@ -119,7 +119,7 @@ s.smacmEMGain = 300;
 % photons/count, camera setting, global to all modules
 s.conversionGain = 26.93; %8A % 24.7; % 8B
 % imaging system property, global to all modules
-s.nmPerPixel = 120.18; % old value is 125.78 % 8A% 160; %8B
+s.nmPerPixel = 120.1;  % old value is 125.78; 8B back = 160
 % channel identifier
 s.channel = '0';
 % [minWidth maxWidth] of the two spots of the DHPSF, units of pixels
