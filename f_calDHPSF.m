@@ -941,6 +941,10 @@ for n = 1:numFiles
     ylabel('number of photons');
     drawnow
     print(h1,'-dpng',[outputFilePrefix 'bead ' num2str(bead) ' stats_1.png']);
+    % close this window if there are a lot of beads that were fitted
+    if numBeads > 10
+        close(h1);
+    end
     
     
     %% plot additional pertaining to the DH-PSF
