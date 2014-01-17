@@ -790,12 +790,13 @@ for n = 1:numFiles
     %180 degrees to 2pi because unwrap function works on intervals of 2pi, not
     %pi
     meanAngles(n,bead,:) = unwrap(meanAngles(n,bead,:)*2*pi/180)*180/(2*pi);
-    if isempty(meanAngles(n,bead,meanAngles(n,bead,:)>0))
+    if isempty(meanAngles(n,bead,meanAngles(n,bead,:)>10))
         meanAngles(n,bead,:) = meanAngles(n,bead,:) + 180;
     end
-    if isempty(meanAngles(n,bead,meanAngles(n,bead,:)<0))
+    if isempty(meanAngles(n,bead,meanAngles(n,bead,:)<-10))
         meanAngles(n,bead,:) = meanAngles(n,bead,:) - 180;
     end
+
 
     % this computes the differences in angle between adjacent steps
     % these differences are sampled at half points between steps
