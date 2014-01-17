@@ -39,7 +39,7 @@ function [outputFilePrefix, numBeads] = ...
 dlg_title = 'Set EM Gain';
 prompt = { 'EM Gain (1 if no gain):' }; 
 def = { '300' };
-blurSize = 1*160/nmPerPixel;
+blurSize = 0.5*160/nmPerPixel;
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 
