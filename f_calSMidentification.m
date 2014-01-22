@@ -208,11 +208,11 @@ for stack = selectedFiles
     %% create output log filenames
     % saves in labeled directory if a channel is selected
     if channel == '0'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\threshold ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) filesep 'threshold ' ...
+            datestr(now,'yyyymmdd HHMM') filesep];
     else
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\' channel(1) ' threshold ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) filesep channel(1) ' threshold ' ...
+            datestr(now,'yyyymmdd HHMM') filesep];
     end
     
     mkdir(outputFilePrefix{stack});

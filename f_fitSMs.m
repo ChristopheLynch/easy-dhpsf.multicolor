@@ -162,11 +162,11 @@ for stack = selectedFiles % = 1:length(dataFile)
     
     % saves in labeled directory if a channel is selected
     if channel == '0'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\molecule fits  ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) filesep 'molecule fits  ' ...
+            datestr(now,'yyyymmdd HHMM') filesep];
     else
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\' channel(1) ' molecule fits  ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) filesep channel(1) ' molecule fits  ' ...
+            datestr(now,'yyyymmdd HHMM') filesep];
     end
     mkdir(outputFilePrefix{stack});
     
@@ -647,7 +647,7 @@ for stack = selectedFiles % = 1:length(dataFile)
         drawnow;
         if printOutputFrames == 1
             set(gcf,'PaperPositionMode','auto');
-            saveas(hSMFits, ['output images\frame ' num2str(c) '.tif']);
+            saveas(hSMFits, ['output images' filesep 'frame ' num2str(c) '.tif']);
         end
     end
     elapsedTime = toc(startTime);
