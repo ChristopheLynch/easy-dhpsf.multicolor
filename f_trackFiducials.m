@@ -100,15 +100,15 @@ for stack = 1:length(dataFile)
     
     % saves in labeled directory if a channel is selected
     if channel == '0'
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\fiduciaries ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) filesep 'fiduciaries ' ...
+            datestr(now,'yyyymmdd HHMM') filesep];
     else
-        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\' channel(1) ' fiduciaries ' ...
-            datestr(now,'yyyymmdd HHMM') '\'];
+        outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) filesep channel(1) ' fiduciaries ' ...
+            datestr(now,'yyyymmdd HHMM') filesep];
     end
     mkdir(outputFilePrefix{stack});
-    %     outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) '\fiduciaries ' ...
-    %         datestr(now,'yyyymmdd HHMM') '\'];
+    %     outputFilePrefix{stack} = [dataPath dataFile{stack}(1:length(dataFile{stack})-4) filesep 'fiduciaries ' ...
+    %         datestr(now,'yyyymmdd HHMM') filesep];
     %     mkdir(outputFilePrefix{stack});
     
     

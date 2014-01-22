@@ -53,8 +53,8 @@ load('Identify_ControlPoints_3D_workspace.mat');
     PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasurement);
 
 
-outputFilePrefix = [reflectedPath '\FilteredLocalizations_std_' ...
-    num2str(max(Locs_reflected(:,8))) '_' num2str(max(Locs_reflected(:,9))) '_' num2str(max(Locs_reflected(:,10))) '\'];
+outputFilePrefix = [reflectedPath filesep 'FilteredLocalizations_std_' ...
+    num2str(max(Locs_reflected(:,8))) '_' num2str(max(Locs_reflected(:,9))) '_' num2str(max(Locs_reflected(:,10))) filesep];
 mkdir(outputFilePrefix);
 
 % show the averaged bead positions
