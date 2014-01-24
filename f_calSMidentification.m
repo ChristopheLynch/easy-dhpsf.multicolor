@@ -27,7 +27,7 @@
 
 function [templateFrames, ROI, dataFile, dataPath, darkFile, logFile,...
             logPath, EMGain, templateLocs] = f_calSMidentification(calFile,calBeadIdx,...
-            templateFile, boxRadius,channel,sigmaBounds,gaussianFilterSigma,minDistBetweenSMs)
+            templateFile, boxRadius,channel,sigmaBounds,gaussianFilterSigma,minDistBetweenSMs,nhaData)
 % f_calSMidentification is a module in easy_dhpsf that prepares the
 % templates from f_calDHPSF and uses them to generate a series of template
 % matches. These are then used to judge an appropriate threshold for 
@@ -154,6 +154,9 @@ for stack = selectedFiles
             templateSize = templateInfo(1).Height;
         else
             load(templateFile);
+            if nhaData
+                template=template(:,5:22,5:22); % crops out lobes in corners with high-frequency psfs (why not fork into main code?)
+            end
             templateSize = size(template,2);
         end
         
@@ -243,69 +246,69 @@ for stack = selectedFiles
         
         %% opens and processes templates of DH-PSF for template matching
         
-        if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
-            
-            numTemplates = size(templateFrames,1);
-            templateColors = jet(numTemplates);
-            template = zeros(numTemplates,templateSize,templateSize);
-            templateLocs = zeros(numTemplates,5);
-            fitParam = zeros(1,8);
-            [xIdx, yIdx] = meshgrid(1:templateSize,1:templateSize);
-            hTemplate=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
-            set(hTemplate,'Visible','off');
-            for a=1:numTemplates
-                for b=templateFrames(a,1):templateFrames(a,2)
-                    template(a,:,:) = squeeze(template(a,:,:)) + ...
-                        double(imread([templatePath templateFile],b,'Info',templateInfo));
-                end
-                % make minimum count level in template equal to 0
-                template(a,:,:) = template(a,:,:) - min(min(template(a,:,:)));
-                % normalize energy contained (sum of all counts) in the template
-                template(a,:,:) = template(a,:,:) / sum(sum(template(a,:,:)));
-                % finally, make mean of template equal to 0
-                template(a,:,:) = template(a,:,:) - mean(mean(template(a,:,:)));
-                
-                % find two largest peaks in template
-                [tempY, tempX] = ind2sub([templateSize templateSize],find(imregionalmax(template(a,:,:))));
-                temp = sortrows([tempX tempY template(sub2ind([numTemplates templateSize templateSize],a*ones(length(tempX),1),tempY,tempX))],-3);
-                
-                % [amp1 amp2 xMean1 yMean1 xMean2 yMean2 sigma1 sigma2]
-                fitParam(3) = temp(1,1);
-                fitParam(4) = temp(1,2);
-                fitParam(5) = temp(2,1);
-                fitParam(6) = temp(2,2);
-                fitParam(1) = temp(1,3);
-                fitParam(2) = temp(2,3);
-                fitParam(7) = 1.8;
-                fitParam(8) = 1.8;
-                lowerBound = [0 0 1 1 1 1 sigmaBounds(1) sigmaBounds(1)];
-                upperBound = [max(max(template(a,:,:))) max(max(template(a,:,:))) ...
-                    templateSize templateSize templateSize templateSize ...
-                    sigmaBounds(2) sigmaBounds(2)];
-                
-                % Fit with lsqnonlin
-                fitParam = lsqnonlin(@(x) ...
-                    f_doubleGaussianVector(x,squeeze(template(a,:,:)),0,xIdx,yIdx),...
-                    fitParam,lowerBound,upperBound,options);
-                
-                templateLocs(a,1:2) = fitParam(3:4);
-                templateLocs(a,3:4) = fitParam(5:6);
-                % calculate rough angle between peaks
-                templateLocs(a,5) = 180/pi*atan2(templateLocs(a,2)-templateLocs(a,4), ...
-                    templateLocs(a,1)-templateLocs(a,3));
-                
-                subplot(1,numTemplates,a);imagesc(squeeze(template(a,:,:)));
-                axis image;colormap hot;colorbar;
-                hold on;
-                plot(templateLocs(a,1),templateLocs(a,2),'.','MarkerEdgeColor', templateColors(a,:));
-                plot(templateLocs(a,3),templateLocs(a,4),'.','MarkerEdgeColor', templateColors(a,:));
-                title({['Template ' mat2str(templateFrames(a,:))] ...
-                    ['Angle = ' num2str(templateLocs(a,5)) ' deg']});
-            end
-            imwrite(frame2im(getframe(hTemplate)),[outputFilePrefix{stack} 'templates.tif']);
-            clear templateInfo tempX tempY temp xIdx yIdx;
-
-        else
+%         if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
+%             
+%             numTemplates = size(templateFrames,1);
+%             templateColors = jet(numTemplates);
+%             template = zeros(numTemplates,templateSize,templateSize);
+%             templateLocs = zeros(numTemplates,5);
+%             fitParam = zeros(1,8);
+%             [xIdx, yIdx] = meshgrid(1:templateSize,1:templateSize);
+%             hTemplate=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
+%             set(hTemplate,'Visible','off');
+%             for a=1:numTemplates
+%                 for b=templateFrames(a,1):templateFrames(a,2)
+%                     template(a,:,:) = squeeze(template(a,:,:)) + ...
+%                         double(imread([templatePath templateFile],b,'Info',templateInfo));
+%                 end
+%                 % make minimum count level in template equal to 0
+%                 template(a,:,:) = template(a,:,:) - min(min(template(a,:,:)));
+%                 % normalize energy contained (sum of all counts) in the template
+%                 template(a,:,:) = template(a,:,:) / sum(sum(template(a,:,:)));
+%                 % finally, make mean of template equal to 0
+%                 template(a,:,:) = template(a,:,:) - mean(mean(template(a,:,:)));
+%                 
+%                 % find two largest peaks in template
+%                 [tempY, tempX] = ind2sub([templateSize templateSize],find(imregionalmax(template(a,:,:))));
+%                 temp = sortrows([tempX tempY template(sub2ind([numTemplates templateSize templateSize],a*ones(length(tempX),1),tempY,tempX))],-3);
+%                 
+%                 % [amp1 amp2 xMean1 yMean1 xMean2 yMean2 sigma1 sigma2]
+%                 fitParam(3) = temp(1,1);
+%                 fitParam(4) = temp(1,2);
+%                 fitParam(5) = temp(2,1);
+%                 fitParam(6) = temp(2,2);
+%                 fitParam(1) = temp(1,3);
+%                 fitParam(2) = temp(2,3);
+%                 fitParam(7) = 1.8;
+%                 fitParam(8) = 1.8;
+%                 lowerBound = [0 0 1 1 1 1 sigmaBounds(1) sigmaBounds(1)];
+%                 upperBound = [max(max(template(a,:,:))) max(max(template(a,:,:))) ...
+%                     templateSize templateSize templateSize templateSize ...
+%                     sigmaBounds(2) sigmaBounds(2)];
+%                 
+%                 % Fit with lsqnonlin
+%                 fitParam = lsqnonlin(@(x) ...
+%                     f_doubleGaussianVector(x,squeeze(template(a,:,:)),0,xIdx,yIdx),...
+%                     fitParam,lowerBound,upperBound,options);
+%                 
+%                 templateLocs(a,1:2) = fitParam(3:4);
+%                 templateLocs(a,3:4) = fitParam(5:6);
+%                 % calculate rough angle between peaks
+%                 templateLocs(a,5) = 180/pi*atan2(templateLocs(a,2)-templateLocs(a,4), ...
+%                     templateLocs(a,1)-templateLocs(a,3));
+%                 
+%                 subplot(1,numTemplates,a);imagesc(squeeze(template(a,:,:)));
+%                 axis image;colormap hot;colorbar;
+%                 hold on;
+%                 plot(templateLocs(a,1),templateLocs(a,2),'.','MarkerEdgeColor', templateColors(a,:));
+%                 plot(templateLocs(a,3),templateLocs(a,4),'.','MarkerEdgeColor', templateColors(a,:));
+%                 title({['Template ' mat2str(templateFrames(a,:))] ...
+%                     ['Angle = ' num2str(templateLocs(a,5)) ' deg']});
+%             end
+%             imwrite(frame2im(getframe(hTemplate)),[outputFilePrefix{stack} 'templates.tif']);
+%             clear templateInfo tempX tempY temp xIdx yIdx;
+% 
+%         else
             templateFrames = templateFrames';
             numTemplates = size(templateFrames,1);
             templateColors = jet(numTemplates);
@@ -324,9 +327,10 @@ for stack = selectedFiles
                 template(templateFrames(a),:,:) = template(templateFrames(a),:,:)...
                     / sum(sum(template(templateFrames(a),:,:)));
                 % finally, make mean of template equal to 0
-                template(templateFrames(a),:,:) = template(templateFrames(a),:,:)...
-                    - mean(mean(template(templateFrames(a),:,:)));
-                
+                if ~nhaData
+                    template(templateFrames(a),:,:) = template(templateFrames(a),:,:)...
+                        - mean(mean(template(templateFrames(a),:,:)));
+                end
                 
                 % find two largest peaks in template
                 [tempY, tempX] = ind2sub([templateSize templateSize],find(imregionalmax(template(templateFrames(a),:,:))));
@@ -372,7 +376,7 @@ for stack = selectedFiles
             imwrite(frame2im(getframe(hTemplate)),[outputFilePrefix{stack} 'templates.tif']);
             clear templateInfo tempX tempY temp xIdx yIdx;
 
-        end
+%         end
         close(hTemplate); % closes template figure
         %% user picks ROI
         % pick region of interest by reading first frame and having user select
@@ -498,7 +502,9 @@ for stack = selectedFiles
             % try weighted phase correlation (emphasizing low frequency
             % components
             H = gaussianFilter./(abs(dataFT).*abs(squeeze(templateFT(b,:,:))));
-            
+            if nhaData
+                H = gaussianFilter;
+            end
             % normalize H so it doesn't add any energy to template match
             %H = H / sqrt(sum(abs(H(:)).^2));
             
@@ -512,6 +518,9 @@ for stack = selectedFiles
             % only remember matches that are 3 standard deviations above the
             % mean
             peakThreshold = mean(peakImg(:))+3*std(peakImg(:));
+            if nhaData
+                peakThreshold=peakThreshold/2; % account for not using phase
+            end
             peakImg(peakImg < peakThreshold) = peakThreshold;
             temp = find(imregionalmax(peakImg));
             % make sure threshold didn't eliminate all peaks and create
@@ -552,6 +561,9 @@ for stack = selectedFiles
         
         for b=1:numPSFLocs
             moleThreshold = round(PSFLocs(b,4)*10000);
+            if nhaData
+                moleThreshold=round(PSFLocs(b,4)); %makes number more reasonable
+            end
             moleFileName = ['template ' num2str(PSFLocs(b,3)) ' threshold ' num2str(moleThreshold,'%g') '.png']; %%f6.4 without scaling
             if isempty(dir([outputFilePrefix{stack} moleFileName]))
                 % create indices to isolate image of candidate molecule

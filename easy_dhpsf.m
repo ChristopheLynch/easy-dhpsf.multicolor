@@ -62,6 +62,8 @@ function easy_dhpsf()
 % widefield microscope. Tiff stacks of images are analyzed using template
 % matching followed by double-Gaussian fitting to extract estimates of the
 % molecule positions.
+s.nhaData=1;
+
 
 %% global file locations
 % file where data is saved
@@ -595,7 +597,7 @@ set(hfig,'Visible','on');
              s.templateLocs] = f_calSMidentification(...
              [s.calFilePrefix 'calibration.mat'],...
              s.calBeadIdx, [s.calFilePrefix 'bead ' num2str(s.calBeadIdx) ' templates.mat'],...
-            s.boxRadius,s.channel,s.sigmaBounds,s.gaussianFilterSigma,s.minDistBetweenSMs);
+            s.boxRadius,s.channel,s.sigmaBounds,s.gaussianFilterSigma,s.minDistBetweenSMs,s.nhaData);
         s.templateThreshs = zeros(length(s.smacmRawFile),length(s.templateIdxs));
         
         s.projStatus(2) = true;
@@ -656,7 +658,7 @@ set(hfig,'Visible','on');
             [s.calFilePrefix 'bead ' num2str(s.calBeadIdx) ' templates.mat'],...
             s.templateIdxs,s.templateThreshs/10000, s.smacmDarkFile, s.smacmSifFile, s.smacmSifPath, s.boxRadius, ...
             s.channel,s.sigmaBounds, s.gaussianFilterSigma,s.minDistBetweenSMs,...
-            s.lobeDistBounds,s.conversionGain,s.nmPerPixel,s.smacmEMGain,s.templateLocs,s.smacmRawROI); 
+            s.lobeDistBounds,s.conversionGain,s.nmPerPixel,s.smacmEMGain,s.templateLocs,s.smacmRawROI,s.nhaData); 
         
         s.projStatus(4) = true;
         s.projStatus(5) = false;
