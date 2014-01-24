@@ -26,7 +26,7 @@
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function [templateFrames, ROI, dataFile, dataPath, darkFile, logFile,...
-            logPath, EMGain, templateLocs] = f_calSMidentification(calFile,calBeadIdx,...
+            logPath, EMGain, templateLocs, outputFilePrefix] = f_calSMidentification(calFile,calBeadIdx,...
             templateFile, boxRadius,channel,sigmaBounds,gaussianFilterSigma,minDistBetweenSMs,nhaData)
 % f_calSMidentification is a module in easy_dhpsf that prepares the
 % templates from f_calDHPSF and uses them to generate a series of template
@@ -145,20 +145,20 @@ for stack = selectedFiles
 %         end
         
         
-        if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
-            
-            templateInfo = imfinfo(templateFile);
-            if templateInfo(1).Height ~= templateInfo(1).Width
-                error('Template is not square');
-            end
-            templateSize = templateInfo(1).Height;
-        else
+%         if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
+%             
+%             templateInfo = imfinfo(templateFile);
+%             if templateInfo(1).Height ~= templateInfo(1).Width
+%                 error('Template is not square');
+%             end
+%             templateSize = templateInfo(1).Height;
+%         else
             load(templateFile);
             if nhaData
                 template=template(:,5:22,5:22); % crops out lobes in corners with high-frequency psfs (why not fork into main code?)
             end
             templateSize = size(template,2);
-        end
+%         end
         
         load(calFile);
         goodFit_forward = logical(squeeze(goodFit_f(1,calBeadIdx,:)));
@@ -430,15 +430,15 @@ for stack = selectedFiles
         templateFT = zeros(numTemplates,cropHeight,cropWidth);
         for a=1:numTemplates
             
-            if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
-                templatePad(a,:,:) = padarray(squeeze(template(a,:,:)),...
-                    [(cropHeight-size(template,2))/2 ...
-                    (cropWidth-size(template,3))/2],min(min(template(a,:,:))));
-            else
+%             if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
+%                 templatePad(a,:,:) = padarray(squeeze(template(a,:,:)),...
+%                     [(cropHeight-size(template,2))/2 ...
+%                     (cropWidth-size(template,3))/2],min(min(template(a,:,:))));
+%             else
                 templatePad(a,:,:) = padarray(squeeze(template(templateFrames(a),:,:)),...
                     [(cropHeight-size(template,2))/2 ...
                     (cropWidth-size(template,3))/2],min(min(template(templateFrames(a),:,:))));
-            end
+%             end
             
             % multiplying by conjugate of template in FT domain is squivalent
             % to flipping the template in the real domain
