@@ -28,7 +28,7 @@
 function [outputFilePrefix] = ...
     f_fitSMs(dataFile,dataPath,calFile,calBeadIdx,templateFile,templateFrames,peakThreshold,...
     darkFile,logFile,logPath,boxRadius,channel, sigmaBounds,gaussianFilterSigma,minDistBetweenSMs,...
-    lobeDistBounds,conversionGain,nmPerPixel,EMGain,templateLocs,ROI,nhaData)
+    lobeDistBounds,conversionGain,nmPerPixel,EMGain,templateLocs,threshFile,ROI,nhaData)
 % f_fitSMs is a module in easy_dhpsf that finds the positions of likely
 % DH-PSF profiles by matching to a series of templates generated in
 % f_calDHPSF and prepared in f_calSMidentification. These are then more
@@ -215,7 +215,7 @@ for stack = selectedFiles % = 1:length(dataFile)
 %             end
 %             templateSize = templateInfo(1).Height;
 %         else
-            load(templateFile);
+            load(threshFile,'template');
             templateSize = size(template,2);
 %         end
         numTemplates = length(templateFrames);
