@@ -421,8 +421,20 @@ for stack = selectedFiles
         %ROI = [84 127 128 130];
         cropWidth = ROI(3);
         cropHeight = ROI(4);
+        
+            
         close(hROI) % closes ROI selection
         
+        if nhaData
+            hFOVmaskFig=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
+            imagesc(avgImg(ROI(2):ROI(2)+ROI(4)-1, ...
+                ROI(1):ROI(1)+ROI(3)-1),[0 300]);
+            axis image;colorbar;colormap hot;
+            title('Select ROI of area to exclude');
+            blankMask = roipoly;
+            close(hFOVmaskFig);
+        end
+    
         %% prepare template for template matching
         
         % pad template to same size as input
@@ -481,7 +493,9 @@ for stack = selectedFiles
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
-
+        if nhaData
+            data=data.*(~blankMask);
+        end
         % subtract the background and continue
         [bkgndImg,~] = f_waveletBackground(data);
         data = data - bkgndImg;
