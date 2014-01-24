@@ -26,7 +26,7 @@
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function [outputFilePrefix] = ...
-    f_fitSMs(dataFile,dataPath,calFile,calBeadIdx,templateFile,templateFrames,peakThreshold,...
+    f_fitSMs(dataFile,dataPath,calFile,calBeadIdx,templateFrames,peakThreshold,...
     darkFile,logFile,logPath,boxRadius,channel, sigmaBounds,gaussianFilterSigma,minDistBetweenSMs,...
     lobeDistBounds,conversionGain,nmPerPixel,EMGain,templateLocs,threshFile,ROI,nhaData)
 % f_fitSMs is a module in easy_dhpsf that finds the positions of likely
@@ -37,6 +37,7 @@ function [outputFilePrefix] = ...
 
 if nhaData
     peakThreshold=peakThreshold*10000; %cancels out the call to divide in easy_dhpsf
+    load(threshFile,'blankMask'); %retrieve mask for censoring data
 end
 
 printOutputFrames = 0;
@@ -145,6 +146,7 @@ if ~isempty(inputdialog)
 else
     filterCPs = false;
 end
+
 
 %% begin fitting loop over files
 for stack = selectedFiles % = 1:length(dataFile)
@@ -344,7 +346,9 @@ for stack = selectedFiles % = 1:length(dataFile)
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
-        
+        if nhaData
+            data=data.*(~blankMask);
+        end
         % subtract the background and continue
         bkgndImg_curr = f_waveletBackground(data);
         bkgndImg = bkgndImg + bkgndImg_curr;
