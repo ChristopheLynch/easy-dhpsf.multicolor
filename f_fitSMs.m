@@ -28,16 +28,20 @@
 function [outputFilePrefix] = ...
     f_fitSMs(dataFile,dataPath,calFile,calBeadIdx,templateFile,templateFrames,peakThreshold,...
     darkFile,logFile,logPath,boxRadius,channel, sigmaBounds,gaussianFilterSigma,minDistBetweenSMs,...
-    lobeDistBounds,conversionGain,nmPerPixel,EMGain,templateLocs,ROI)
+    lobeDistBounds,conversionGain,nmPerPixel,EMGain,templateLocs,ROI,nhaData)
 % f_fitSMs is a module in easy_dhpsf that finds the positions of likely
 % DH-PSF profiles by matching to a series of templates generated in
 % f_calDHPSF and prepared in f_calSMidentification. These are then more
 % precisely localized using a double gaussian fit and corrected for drift
 % using the results from f_trackFiducials.
 
+if nhaData
+    peakThreshold=peakThreshold*10000; %cancels out the call to divide in easy_dhpsf
+end
+
 printOutputFrames = 0;
 
-if printOutputFrames == 1
+if printOutputFrames == 1 % this will save all process images (correlation image, raw data, and reconstruction)
     mkdir('output images');
 end
 
@@ -147,15 +151,16 @@ for stack = selectedFiles % = 1:length(dataFile)
     
     %%% this is an efficient way to set these variables if frames were
     %%% selected above
-    %     fileIdx = find(selectedFiles == stack);
-    %     fileInfo = fileInfoAll{fileIdx};
-    %     frames = framesAll{fileIdx};
-    %     numFrames = numFramesAll(fileIdx);
+        fileIdx = find(selectedFiles == stack);
+        fileInfo = fileInfoAll{fileIdx};
+        frames = framesAll{fileIdx};
+        numFrames = numFramesAll(fileIdx);
     
     %%% these variables must be set this way if frames were not selected
-    fileInfo = imfinfo([dataPath dataFile{stack}]);
-    numFrames = length(fileInfo);
-    frames = 1:numFrames;
+%     fileInfo = imfinfo([dataPath dataFile{stack}]);
+%     numFrames = length(fileInfo);
+%     frames = 1:numFrames;
+    
     imgHeight = fileInfo(1).Height;
     imgWidth = fileInfo(1).Width;
     %% create output log filenames
@@ -203,16 +208,16 @@ for stack = selectedFiles % = 1:length(dataFile)
         %         avgImg = avgImg/200;
         
         %define variables related to the templates
-        if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
-            templateInfo = imfinfo(templateFile);
-            if templateInfo(1).Height ~= templateInfo(1).Width
-                error('Template is not square');
-            end
-            templateSize = templateInfo(1).Height;
-        else
+%         if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
+%             templateInfo = imfinfo(templateFile);
+%             if templateInfo(1).Height ~= templateInfo(1).Width
+%                 error('Template is not square');
+%             end
+%             templateSize = templateInfo(1).Height;
+%         else
             load(templateFile);
             templateSize = size(template,2);
-        end
+%         end
         numTemplates = length(templateFrames);
         templateColors = jet(numTemplates);
         
@@ -260,16 +265,16 @@ for stack = selectedFiles % = 1:length(dataFile)
         templatePad = zeros(numTemplates,cropHeight,cropWidth);
         templateFT = zeros(numTemplates,cropHeight,cropWidth);
         for a=1:numTemplates
-            
-            if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
-                templatePad(a,:,:) = padarray(squeeze(template(a,:,:)),...
-                    [(cropHeight-size(template,2))/2 ...
-                    (cropWidth-size(template,3))/2],min(min(template(a,:,:))));
-            else
+%             
+%             if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
+%                 templatePad(a,:,:) = padarray(squeeze(template(a,:,:)),...
+%                     [(cropHeight-size(template,2))/2 ...
+%                     (cropWidth-size(template,3))/2],min(min(template(a,:,:))));
+%             else
                 templatePad(a,:,:) = padarray(squeeze(template(templateFrames(a),:,:)),...
                     [(cropHeight-size(template,2))/2 ...
                     (cropWidth-size(template,3))/2],min(min(template(templateFrames(a),:,:))));
-            end
+%             end
             
             % multiplying by conjugate of template in FT domain is equivalent
             % to flipping the template in the real domain
@@ -363,6 +368,9 @@ for stack = selectedFiles % = 1:length(dataFile)
             % components
             H = gaussianFilter./(abs(dataFT).*abs(squeeze(templateFT(b,:,:))));
             
+            if nhaData
+                H = gaussianFilter;
+            end
             % normalize H so it doesn't add any energy to template match
             %H = H / sqrt(sum(abs(H(:)).^2));
             
