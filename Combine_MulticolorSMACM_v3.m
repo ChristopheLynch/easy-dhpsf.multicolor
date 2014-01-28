@@ -183,7 +183,7 @@ if ~registrationComplete
     %     endFrames_green = frames_green(find(diff(frames_green)==36));
     temp = diff(frames_red);
     endFrames_red = frames_red(find(diff(frames_red)== mean(temp(temp>4))));
-    startFrames_green = endFrames_red+1;
+    startFrames_green = endFrames_red+1; % this seems very likely to fail if we make any changes to the acquisition parameters....
     clear temp
 
     %% Show the decomposed fiducial tracks
@@ -264,13 +264,13 @@ if ~registrationComplete
     dlg_title = 'Inspect Fiducial Tracks';
     prompt = {'Choose Fiducial Track to denoise and use to correct drift'};
     def =       { 'untransformed'  };
-    questiondialog = questdlg(prompt,dlg_title, def);
+    questiondialog = questdlg(prompt,dlg_title,'untransformed','transformed', def);
     % Handle response
     switch questiondialog
         case 'untransformed'
-                chosenFidTrack = transformedDataSet;
-        case 'transformed'
                 chosenFidTrack = untransformedDataSet;
+        case 'transformed'
+                chosenFidTrack = transformedDataSet;
         case 'Cancel'
             error('User cancelled the program');
     end
@@ -281,19 +281,20 @@ if ~registrationComplete
     fidTracksX_denoised_redFrames = nan(size(fidTracksX,1),size(fidTracksX,2));
     fidTracksY_denoised_redFrames = nan(size(fidTracksX,1),size(fidTracksX,2));
     fidTracksZ_denoised_redFrames = nan(size(fidTracksX,1),size(fidTracksX,2));
-
+    
+    
     [fidTracksX_denoised_redFrames(frames_red,transformedDataSet),...
         fidTracksY_denoised_redFrames(frames_red,transformedDataSet),...
         fidTracksZ_denoised_redFrames(frames_red,transformedDataSet)] = f_waveletFidTracks(...
         fidTracksX(frames_red,transformedDataSet),...
         fidTracksY(frames_red,transformedDataSet),...
-        fidTracksZ(frames_red,transformedDataSet),0);
+        fidTracksZ(frames_red,transformedDataSet),1);%0);
     [fidTracksX_denoised_redFrames(frames_red,untransformedDataSet),...
         fidTracksY_denoised_redFrames(frames_red,untransformedDataSet),...
         fidTracksZ_denoised_redFrames(frames_red,untransformedDataSet)] = f_waveletFidTracks(...
         fidTracksX(frames_red,untransformedDataSet),...
         fidTracksY(frames_red,untransformedDataSet),...
-        fidTracksZ(frames_red,untransformedDataSet),0);
+        fidTracksZ(frames_red,untransformedDataSet),1);%0);
     
     % Denoise the green illuminated frames 
     fidTracksX_denoised_greenFrames = nan(size(fidTracksX,1),size(fidTracksX,2));
@@ -305,13 +306,13 @@ if ~registrationComplete
         fidTracksZ_denoised_greenFrames(frames_green,transformedDataSet)] = f_waveletFidTracks(...
         fidTracksX(frames_green,transformedDataSet),...
         fidTracksY(frames_green,transformedDataSet),...
-        fidTracksZ(frames_green,transformedDataSet),0);
+        fidTracksZ(frames_green,transformedDataSet),1);%0);
     [fidTracksX_denoised_greenFrames(frames_green,untransformedDataSet),...
         fidTracksY_denoised_greenFrames(frames_green,untransformedDataSet),...
         fidTracksZ_denoised_greenFrames(frames_green,untransformedDataSet)] = f_waveletFidTracks(...
         fidTracksX(frames_green,untransformedDataSet),...
         fidTracksY(frames_green,untransformedDataSet),...
-        fidTracksZ(frames_green,untransformedDataSet),0);
+        fidTracksZ(frames_green,untransformedDataSet),1);%0);
 
     save('workspace.mat')
     % Show the piecewise denoised tracks of the chosen channel
@@ -423,13 +424,13 @@ if ~registrationComplete
         fidTracksZ_shifted_denoised(:,transformedDataSet)] = f_waveletFidTracks(...
         fidTracksX_shifted(:,transformedDataSet),...
         fidTracksY_shifted(:,transformedDataSet),...
-        fidTracksZ_shifted(:,transformedDataSet),0);
+        fidTracksZ_shifted(:,transformedDataSet),1);
     [fidTracksX_shifted_denoised(:,untransformedDataSet),...
         fidTracksY_shifted_denoised(:,untransformedDataSet),...
         fidTracksZ_shifted_denoised(:,untransformedDataSet)] = f_waveletFidTracks(...
         fidTracksX_shifted(:,untransformedDataSet),...
         fidTracksY_shifted(:,untransformedDataSet),...
-        fidTracksZ_shifted(:,untransformedDataSet),0);
+        fidTracksZ_shifted(:,untransformedDataSet),1);
     
         % Show the chromatic shifted fiducial tracks and the denoising result 
     color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
@@ -475,11 +476,13 @@ if ~registrationComplete
     syncFrames = find(~isnan(fidTracksX(:,1)));
     syncFrames = syncFrames(end-(numSyncFrames-1):end);
 
-    avgDevX = fidTracksX_shifted_denoised(:,:) - mean(fidTracksX_shifted_denoised(syncFrames,:));
-    avgDevY = fidTracksY_shifted_denoised(:,:) - mean(fidTracksY_shifted_denoised(syncFrames,:));
-    avgDevZ = fidTracksZ_shifted_denoised(:,:) - mean(fidTracksZ_shifted_denoised(syncFrames,:));
+    avgDevX = fidTracksX_shifted_denoised(:,chosenFidTrack) - mean(fidTracksX_shifted_denoised(syncFrames,chosenFidTrack));
+    avgDevY = fidTracksY_shifted_denoised(:,chosenFidTrack) - mean(fidTracksY_shifted_denoised(syncFrames,chosenFidTrack));
+    avgDevZ = fidTracksZ_shifted_denoised(:,chosenFidTrack) - mean(fidTracksZ_shifted_denoised(syncFrames,chosenFidTrack));
     
         % Show the drift correction to be applied
+    close all; % close extraneous figures
+
     color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
     figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
@@ -488,15 +491,15 @@ if ~registrationComplete
         'DefaultAxesLineWidth',1.2);
 
         subplot(3,1,1)
-        plot(avgDevX(:,chosenFidTrack), color{chosenFidTrack});
+        plot(avgDevX, color{chosenFidTrack});
         xlabel('frame number');ylabel('X position (nm)');
 
         subplot(3,1,2)
-        plot(avgDevY(:,chosenFidTrack), color{chosenFidTrack});
+        plot(avgDevY, color{chosenFidTrack});
         xlabel('frame number');ylabel('Y position (nm)');
 
         subplot(3,1,3)
-        plot(avgDevZ(:,chosenFidTrack), color{chosenFidTrack});
+        plot(avgDevZ, color{chosenFidTrack});
         xlabel('frame number');ylabel('Z position (nm)');
 
         %% Apply fiduciary corrections
@@ -513,13 +516,13 @@ if ~registrationComplete
 %         dataSets(i).fidTrackZ_denoised = fidTracksZ_denoised(:,i);
 
         if dataSets(i).transformedDataset
-            dataSets(i).xLoc_driftCorr = dataSets(i).xLoc_transformed - avgDevX(dataSets(i).frameNum,chosenFidTrack);
-            dataSets(i).yLoc_driftCorr = dataSets(i).yLoc_transformed - avgDevY(dataSets(i).frameNum,chosenFidTrack);
-            dataSets(i).zLoc_driftCorr = dataSets(i).zLoc_transformed - avgDevZ(dataSets(i).frameNum,chosenFidTrack);
+            dataSets(i).xLoc_driftCorr = dataSets(i).xLoc_transformed - avgDevX(dataSets(i).frameNum);
+            dataSets(i).yLoc_driftCorr = dataSets(i).yLoc_transformed - avgDevY(dataSets(i).frameNum);
+            dataSets(i).zLoc_driftCorr = dataSets(i).zLoc_transformed - avgDevZ(dataSets(i).frameNum);
         else
-            dataSets(i).xLoc_driftCorr = dataSets(i).xLoc - avgDevX(dataSets(i).frameNum,chosenFidTrack);
-            dataSets(i).yLoc_driftCorr = dataSets(i).yLoc - avgDevY(dataSets(i).frameNum,chosenFidTrack);
-            dataSets(i).zLoc_driftCorr = dataSets(i).zLoc - avgDevZ(dataSets(i).frameNum,chosenFidTrack);
+            dataSets(i).xLoc_driftCorr = dataSets(i).xLoc - avgDevX(dataSets(i).frameNum);
+            dataSets(i).yLoc_driftCorr = dataSets(i).yLoc - avgDevY(dataSets(i).frameNum);
+            dataSets(i).zLoc_driftCorr = dataSets(i).zLoc - avgDevZ(dataSets(i).frameNum);
         end
     end
     
@@ -528,155 +531,7 @@ if ~registrationComplete
     % needs to developed here.
     for i = 1:length(dataSets)
         dataSets(i).zLoc_driftCorr_indexCorr = dataSets(i).zLoc_driftCorr * nSample/nOil;
-    end
-    
-    
-    %%
-    
-%     %% Center the last frames of the chosen fiducial tracks
-% 
-%     syncFrames = find(~isnan(fidTracksX(:,1)));
-%     syncFrames = syncFrames(end-(numSyncFrames-1):end);
-%     
-%     devX = nan(size(fidTracksX,1),size(fidTracksX,2));
-%     devY = nan(size(fidTracksX,1),size(fidTracksX,2));
-%     devZ = nan(size(fidTracksX,1),size(fidTracksX,2));
-%     avgDevX = nan(size(fidTracksX,1),1);
-%     avgDevY = nan(size(fidTracksX,1),1);
-%     avgDevZ = nan(size(fidTracksX,1),1);
-%     
-%     for bead = 1:size(fidTracksX,2)
-%         
-%         devX(:,bead) = fidTracksX(:,bead) - mean(fidTracksX(syncFrames,bead));
-%         devY(:,bead) = fidTracksY(:,bead) - mean(fidTracksY(syncFrames,bead));
-%         devZ(:,bead) = fidTracksZ(:,bead) - mean(fidTracksZ(syncFrames,bead));
-%         
-%         avgDevX = avgDevX + devX(:,bead);
-%         avgDevY = avgDevY + devY(:,bead);
-%         avgDevZ = avgDevZ + devZ(:,bead);
-%         
-%     end
-%     avgDevX = avgDevX./size(fidTracksX,2);
-%     avgDevY = avgDevY./size(fidTracksX,2);
-%     avgDevZ = avgDevZ./size(fidTracksX,2);
-    
-%     %% Denoise the raw data
-%     fidTracksX_denoised = fidTracksX;
-%     fidTracksY_denoised = fidTracksY;
-%     fidTracksZ_denoised = fidTracksZ;
-%     [fidTracksX_denoised(:,transformedDataSet),...
-%         fidTracksY_denoised(:,transformedDataSet),...
-%         fidTracksZ_denoised(:,transformedDataSet)] = f_waveletFidTracks(...
-%         fidTracksX(:,transformedDataSet),...
-%         fidTracksY(:,transformedDataSet),...
-%         fidTracksZ(:,transformedDataSet),0);
-%     [fidTracksX_denoised(:,untransformedDataSet),...
-%         fidTracksY_denoised(:,untransformedDataSet),...
-%         fidTracksZ_denoised(:,untransformedDataSet)] = f_waveletFidTracks(...
-%         fidTracksX(:,untransformedDataSet),...
-%         fidTracksY(:,untransformedDataSet),...
-%         fidTracksZ(:,untransformedDataSet),1);
-    
-%     %% denoise the shifted data
-%     devX_denoised = devX;
-%     devY_denoised = devY;
-%     devZ_denoised = devZ;
-%     [devX_denoised(:,transformedDataSet),...
-%         devY_denoised(:,transformedDataSet),...
-%         devZ_denoised(:,transformedDataSet)] = f_waveletFidTracks(...
-%         devX(:,transformedDataSet),...
-%         devY(:,transformedDataSet),...
-%         devZ(:,transformedDataSet),0);
-%     [devX_denoised(:,untransformedDataSet),...
-%         devY_denoised(:,untransformedDataSet),...
-%         devZ_denoised(:,untransformedDataSet)] = f_waveletFidTracks(...
-%         devX(:,untransformedDataSet),...
-%         devY(:,untransformedDataSet),...
-%         devZ(:,untransformedDataSet),0);
-    
-    
-%     %% Apply fiduciary corrections
-%     % use only data aquired in the untransformed channel.
-%     % Transformed data may introduce additional noise and systematic offsets
-%     for i = 1:length(dataSets)
-%         dataSets(i).devX = devX(:,i);
-%         dataSets(i).devY = devY(:,i);
-%         dataSets(i).devZ = devZ(:,i);
-%         dataSets(i).devX_denoised = devX_denoised(:,i);
-%         dataSets(i).devY_denoised = devY_denoised(:,i);
-%         dataSets(i).devZ_denoised = devZ_denoised(:,i);
-%         dataSets(i).fidTrackX_denoised = fidTracksX_denoised(:,i);
-%         dataSets(i).fidTrackY_denoised = fidTracksY_denoised(:,i);
-%         dataSets(i).fidTrackZ_denoised = fidTracksZ_denoised(:,i);
-%         % De-noise the fiduciary tracks
-%         % use only data aquired in this channel.  Transformed data may introduce
-%         % additional noise and systematic offsets
-%         if dataSets(i).transformedDataset
-%             dataSets(i).xLoc_driftCorr = dataSets(i).xLoc_transformed - devX_denoised(dataSets(i).frameNum,untransformedDataSet);
-%             dataSets(i).yLoc_driftCorr = dataSets(i).yLoc_transformed - devY_denoised(dataSets(i).frameNum,untransformedDataSet);
-%             dataSets(i).zLoc_driftCorr = dataSets(i).zLoc_transformed - devZ_denoised(dataSets(i).frameNum,untransformedDataSet);
-%         else
-%             dataSets(i).xLoc_driftCorr = dataSets(i).xLoc - devX_denoised(dataSets(i).frameNum,untransformedDataSet);
-%             dataSets(i).yLoc_driftCorr = dataSets(i).yLoc - devY_denoised(dataSets(i).frameNum,untransformedDataSet);
-%             dataSets(i).zLoc_driftCorr = dataSets(i).zLoc - devZ_denoised(dataSets(i).frameNum,untransformedDataSet);
-%         end
-%     end
-    
-
-    
-%     %% Show the decomposed fiducial tracks
-%     color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
-%     figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
-%     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
-%         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
-%         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
-%         'DefaultAxesLineWidth',1.2);
-%     
-%     for i = 1:length(dataSets)
-%         if dataSets(i).transformedDataset
-%             subplot(3,1,1)
-%             plot(dataSets(i).fidTrackX_transformed, color{i});
-%             xlabel('frame number');ylabel('X position (nm)');
-%             hold on
-%             subplot(3,1,2)
-%             plot(dataSets(i).fidTrackY_transformed, color{i});
-%             xlabel('frame number');ylabel('Y position (nm)');
-%             hold on
-%             subplot(3,1,3)
-%             plot(dataSets(i).fidTrackZ_transformed, color{i});
-%             xlabel('frame number');ylabel('Z position (nm)');
-%             hold on
-%         else
-%             subplot(3,1,1)
-%             plot(dataSets(i).fidTrackX, color{i});
-%             xlabel('frame number');ylabel('X position (nm)');
-%             hold on
-%             subplot(3,1,2)
-%             plot(dataSets(i).fidTrackY, color{i});
-%             xlabel('frame number');ylabel('Y position (nm)');
-%             hold on
-%             subplot(3,1,3)
-%             plot(dataSets(i).fidTrackZ, color{i});
-%             xlabel('frame number');ylabel('Z position (nm)');
-%             hold on
-%         end
-%         hold on
-%     end
-%     % display the mean track also
-%     subplot(3,1,1)
-%     plot(nanmean(fidTracksX,2), 'black');
-%     xlabel('frame number');ylabel('X position (nm)');
-%     hold off
-%     subplot(3,1,2)
-%     plot(nanmean(fidTracksY,2), 'black');
-%     xlabel('frame number');ylabel('Y position (nm)');
-%     hold off
-%     subplot(3,1,3)
-%     plot(nanmean(fidTracksZ,2), 'black');
-%     xlabel('frame number');ylabel('Z position (nm)');
-%     hold off
-%     
-        
+    end 
 
     %% Show the difference between the registered fiducial tracks
     figure_h_c = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
@@ -739,64 +594,66 @@ if ~registrationComplete
     clear avg
     
     %% Show the difference between the denoised and fused fiducial tracks
-    figure_h_d = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
-    set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
-        'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
-        'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
-        'DefaultAxesLineWidth',1.2);
-    
-    subplot(4,1,1)
-    plot(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
-    xlabel('frame number');ylabel('X position shift (nm)');
-    avg = nanmean(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
-    stdev = nanstd(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
-    ylim([avg-5*stdev avg+7*stdev])
-    hold on
-    plot(dataSets(2).fidTrack_interpolated_TRE(:,2),'red','LineWidth' ,2)
-    hold off
-    legend({['offset = ' num2str(avg),...
-        ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_x']})
-    title({['Fused Fiducial Tracks (denoised)']})
-    
-    subplot(4,1,2)
-    plot(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
-    xlabel('frame number');ylabel('Y position shift (nm)');
-    avg = nanmean(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
-    stdev = nanstd(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
-    ylim([avg-5*stdev avg+7*stdev])
-    hold on
-    plot(dataSets(2).fidTrack_interpolated_TRE(:,3),'red','LineWidth' ,2)
-    hold off
-    legend({['offset = ' num2str(avg),...
-        ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_y']})
-    
-    subplot(4,1,3)
-    plot(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
-    xlabel('frame number');ylabel('Z position shift (nm)');
-    avg = nanmean(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
-    stdev = nanstd(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
-    ylim([avg-5*stdev avg+7*stdev])
-    hold on
-    plot(dataSets(2).fidTrack_interpolated_TRE(:,4),'red','LineWidth' ,2)
-    hold off
-    legend({['offset = ' num2str(avg),...
-        ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_z']})
-    
-    subplot(4,1,4)
-    euclid_Dist = sqrt(((fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2)).^2)+...
-        ((fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2)).^2+...
-        ((fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2)).^2)));
-    plot(euclid_Dist);
-    xlabel('frame number');ylabel('3D shift (nm)');
-    avg = nanmean(euclid_Dist);
-    stdev = nanstd(euclid_Dist);
-    ylim([0 avg+7*stdev])
-    hold on
-    plot(dataSets(2).fidTrack_interpolated_TRE(:,1),'red','LineWidth' ,2)
-    hold off
-    legend({['offset = ' num2str(avg),...
-        ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_3_D']})
-    clear avg
+    % this uses the variables 'fidTracksX_denoised' and so on, which aren't
+    % defined...?
+%     figure_h_d = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
+%     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
+%         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
+%         'DefaultAxesTickLength',[0.01 0.01],'DefaultAxesTickDir','out',...
+%         'DefaultAxesLineWidth',1.2);
+%     
+%     subplot(4,1,1)
+%     plot(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
+%     xlabel('frame number');ylabel('X position shift (nm)');
+%     avg = nanmean(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
+%     stdev = nanstd(fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2));
+%     ylim([avg-5*stdev avg+7*stdev])
+%     hold on
+%     plot(dataSets(2).fidTrack_interpolated_TRE(:,2),'red','LineWidth' ,2)
+%     hold off
+%     legend({['offset = ' num2str(avg),...
+%         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_x']})
+%     title({['Fused Fiducial Tracks (denoised)']})
+%     
+%     subplot(4,1,2)
+%     plot(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
+%     xlabel('frame number');ylabel('Y position shift (nm)');
+%     avg = nanmean(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
+%     stdev = nanstd(fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2));
+%     ylim([avg-5*stdev avg+7*stdev])
+%     hold on
+%     plot(dataSets(2).fidTrack_interpolated_TRE(:,3),'red','LineWidth' ,2)
+%     hold off
+%     legend({['offset = ' num2str(avg),...
+%         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_y']})
+%     
+%     subplot(4,1,3)
+%     plot(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
+%     xlabel('frame number');ylabel('Z position shift (nm)');
+%     avg = nanmean(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
+%     stdev = nanstd(fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2));
+%     ylim([avg-5*stdev avg+7*stdev])
+%     hold on
+%     plot(dataSets(2).fidTrack_interpolated_TRE(:,4),'red','LineWidth' ,2)
+%     hold off
+%     legend({['offset = ' num2str(avg),...
+%         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_z']})
+%     
+%     subplot(4,1,4)
+%     euclid_Dist = sqrt(((fidTracksX_denoised(:,1)-fidTracksX_denoised(:,2)).^2)+...
+%         ((fidTracksY_denoised(:,1)-fidTracksY_denoised(:,2)).^2+...
+%         ((fidTracksZ_denoised(:,1)-fidTracksZ_denoised(:,2)).^2)));
+%     plot(euclid_Dist);
+%     xlabel('frame number');ylabel('3D shift (nm)');
+%     avg = nanmean(euclid_Dist);
+%     stdev = nanstd(euclid_Dist);
+%     ylim([0 avg+7*stdev])
+%     hold on
+%     plot(dataSets(2).fidTrack_interpolated_TRE(:,1),'red','LineWidth' ,2)
+%     hold off
+%     legend({['offset = ' num2str(avg),...
+%         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_3_D']})
+%     clear avg
     
     %% Show the fiducial tracks in the same coordinate system
     figure_h_a = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
@@ -843,9 +700,9 @@ if ~registrationComplete
     saveas(figure_h_c,[savePath 'XYZFidMisregistration.fig']);
     saveas(figure_h_c,[savePath 'XYZFidMisregistration.png']);
     close(figure_h_c)
-    saveas(figure_h_d,[savePath 'XYZFidMisregistration_denoised.fig']);
-    saveas(figure_h_d,[savePath 'XYZFidMisregistration_denoised.png']);
-    close(figure_h_d)
+%     saveas(figure_h_d,[savePath 'XYZFidMisregistration_denoised.fig']);
+%     saveas(figure_h_d,[savePath 'XYZFidMisregistration_denoised.png']);
+%     close(figure_h_d)
     
 
     
