@@ -404,7 +404,7 @@ while anotherpass == true
         xLoc = catPSFfits(goodFits,28);
         yLoc = catPSFfits(goodFits,29);
         zLoc = catPSFfits(goodFits,30);
-        xLoc_bad_ = catPSFfits(badFits,28);
+        xLoc_bad = catPSFfits(badFits,28);
         yLoc_bad = catPSFfits(badFits,29);
         % still generate xLoc etc. as below, but call them 'raw' if fids
         % were used. these can then be used for registration, where both
@@ -417,6 +417,7 @@ while anotherpass == true
         zLocRaw = catPSFfits(goodFits,27);
         xLoc_badRaw = catPSFfits(badFits,25);
         yLoc_badRaw = catPSFfits(badFits,26);
+        
     else % if no fid-corrected traces were generated (column 30 is nan)
         goodFits = goodFits & catPSFfits(:,27) >= corrzRange(1) & catPSFfits(:,27) <= corrzRange(2);        
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
