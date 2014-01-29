@@ -59,9 +59,9 @@ if ~registrationComplete
         
         %    Assemble the structure for this dataset
         dataSet.frameNum = frameNum;
-        dataSet.xLoc = xLoc;
-        dataSet.yLoc = yLoc;
-        dataSet.zLoc = zLoc;
+        dataSet.xLoc = xLocRaw;
+        dataSet.yLoc = yLocRaw;
+        dataSet.zLoc = zLocRaw;
         dataSet.sigmaX = sigmaX;
         dataSet.sigmaY = sigmaY;
         dataSet.sigmaZ = sigmaZ;
@@ -82,7 +82,7 @@ if ~registrationComplete
                 
                 % transform SM data
                 dataSet.transformedDataset = true;
-                transformedData = transformData([xLoc, yLoc, zLoc],tform);
+                transformedData = transformData([xLocRaw, yLocRaw, zLocRaw],tform);
                 dataSet.xLoc_transformed = transformedData(:,1);
                 dataSet.yLoc_transformed = transformedData(:,2);
                 dataSet.zLoc_transformed = transformedData(:,3);

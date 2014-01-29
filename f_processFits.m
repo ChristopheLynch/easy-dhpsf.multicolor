@@ -395,18 +395,30 @@ while anotherpass == true
     % transformation to the z position)
     corrzRange = zRange * nOil/nSample;
     
-    % extract data; check if fiducial correction is in play (i.e., col 30 exists)
+    % extract data; check if fiducial correction is in play (i.e., col 30 is not all nans)
+    % notate fid-corrected localizations separately
     if sum(isnan(catPSFfits(:,30))) ~= size(catPSFfits,1)
-        goodFits = goodFits & catPSFfits(:,30) >= corrzRange(1) & catPSFfits(:,30) <= corrzRange(2);
+        goodFits = goodFits & catPSFfits(:,30) >= corrzRange(1) & catPSFfits(:,30) <= corrzRange(2); % try to fid-corrected values for z range
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
         xLoc = catPSFfits(goodFits,28);
         yLoc = catPSFfits(goodFits,29);
         zLoc = catPSFfits(goodFits,30);
-        xLoc_bad = catPSFfits(badFits,28);
+        xLoc_bad_ = catPSFfits(badFits,28);
         yLoc_bad = catPSFfits(badFits,29);
-    else
-        goodFits = goodFits & catPSFfits(:,27) >= corrzRange(1) & catPSFfits(:,27) <= corrzRange(2);
+        % still generate xLoc etc. as below, but call them 'raw' if fids
+        % were used. these can then be used for registration, where both
+        % focal shift correction and fiducial correction should be
+        % performed AFTER registering the two channels.
+        xLocPixRaw = catPSFfits(goodFits,18)/nmPerPixel;
+        yLocPixRaw = catPSFfits(goodFits,19)/nmPerPixel;
+        xLocRaw = catPSFfits(goodFits,25);
+        yLocRaw = catPSFfits(goodFits,26);
+        zLocRaw = catPSFfits(goodFits,27);
+        xLoc_badRaw = catPSFfits(badFits,25);
+        yLoc_badRaw = catPSFfits(badFits,26);
+    else % if no fid-corrected traces were generated (column 30 is nan)
+        goodFits = goodFits & catPSFfits(:,27) >= corrzRange(1) & catPSFfits(:,27) <= corrzRange(2);        
         xLocPix = catPSFfits(goodFits,18)/nmPerPixel;
         yLocPix = catPSFfits(goodFits,19)/nmPerPixel;
         xLoc = catPSFfits(goodFits,25);
@@ -414,10 +426,12 @@ while anotherpass == true
         zLoc = catPSFfits(goodFits,27);
         xLoc_bad = catPSFfits(badFits,25);
         yLoc_bad = catPSFfits(badFits,26);
-
     end
+        
     clear corrzRange
     zLoc_IndexCorrected = zLoc * nSample/nOil;
+    zLoc_IndexCorrectedRaw = zLocRaw * nSample/nOil;
+    
     numPhotons = catPSFfits(goodFits,21);
 %     meanBkgnd = totalPSFfits(goodFits,15)*conversionFactor;
     meanBkgnd = catPSFfits(goodFits,15);  % output from template match is already in units of photons.
@@ -469,6 +483,16 @@ while anotherpass == true
     yLoc = yLoc(validPoints);
     zLoc = zLoc(validPoints);
     zLoc_IndexCorrected = zLoc_IndexCorrected(validPoints);
+    
+    if exist('xLocRaw')
+        xLocPixRaw = xLocPixRaw(validPoints);
+        yLocPixRaw = yLocPixRaw(validPoints); 
+        xLocRaw = xLocRaw(validPoints);
+        yLocRaw = yLocRaw(validPoints);
+        zLocRaw = zLocRaw(validPoints);
+        zLoc_IndexCorrectedRaw = zLoc_IndexCorrectedRaw(validPoints);
+    end
+    
 %     [std(xLoc) std(yLoc) std(zLoc)]
     numPhotons = numPhotons(validPoints);
     meanBkgnd = meanBkgnd(validPoints);
@@ -676,6 +700,9 @@ if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','zLoc_IndexCorrected','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
         'wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ');
+    if exist('xLocRaw');
+        save([savePath 'Output'],'xLocRaw','yLocRaw','zLocRaw','zLoc_IndexCorrectedRaw','-append');
+    end
 end
 %%
 % output excel spreadsheet
