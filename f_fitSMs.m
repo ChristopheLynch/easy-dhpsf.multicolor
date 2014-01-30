@@ -342,7 +342,7 @@ for stack = selectedFiles % = 1:length(dataFile)
         length(ROI(1):ROI(1)+ROI(3)-1));
     numbkgndImg = 0;
     
-    for c=frames
+    for c=frames'
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI

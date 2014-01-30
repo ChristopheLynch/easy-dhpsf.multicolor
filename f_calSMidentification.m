@@ -154,9 +154,10 @@ for stack = selectedFiles
 %             templateSize = templateInfo(1).Height;
 %         else
             load(templateFile);
-            if nhaData
-                template=template(:,5:22,5:22); % crops out lobes in corners with high-frequency psfs (why not fork into main code?)
-            end
+%             if nhaData
+                  % an alternate way to do this is to just manually edit the template.mat files to cut out the neighboring PSFs  
+%                 template=template(:,5:22,5:22); % crops out lobes in corners with high-frequency psfs (why not fork into main code?)
+%             end
             templateSize = size(template,2);
 %         end
         
@@ -489,7 +490,7 @@ for stack = selectedFiles
     numPSFfits = 0;
     startTime = tic;
 %     frameNum = 1;
-    for c = frames(end:-1:1);
+    for c = frames(end:-1:1)'
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
@@ -533,7 +534,8 @@ for stack = selectedFiles
             % mean
             peakThreshold = mean(peakImg(:))+3*std(peakImg(:));
             if nhaData
-                peakThreshold=peakThreshold/2; % account for not using phase
+%                 peakThreshold=peakThreshold/2; % account for not using phase
+                peakThreshold = mean(peakImg(:))+std(peakImg(:));
             end
             peakImg(peakImg < peakThreshold) = peakThreshold;
             temp = find(imregionalmax(peakImg));
