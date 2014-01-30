@@ -760,23 +760,24 @@ while anotherpass == true
     close all
     
     %% Plot the white light image if specified
-    if whiteLightFile ~= 0
-        whiteLightInfo = imfinfo([whiteLightPath whiteLightFile]);
-        whiteLight = zeros(whiteLightInfo(1).Height, whiteLightInfo(1).Width);
-        % average white light images together to get better SNR
-        for a = 1:length(whiteLightInfo)
-            whiteLight = whiteLight + double(imread([whiteLightPath whiteLightFile], ...
-                'Info', whiteLightInfo));
+    if pass == 1
+        if whiteLightFile ~= 0
+            whiteLightInfo = imfinfo([whiteLightPath whiteLightFile]);
+            whiteLight = zeros(whiteLightInfo(1).Height, whiteLightInfo(1).Width);
+            % average white light images together to get better SNR
+            for a = 1:length(whiteLightInfo)
+                whiteLight = whiteLight + double(imread([whiteLightPath whiteLightFile], ...
+                    'Info', whiteLightInfo));
+            end
+            % resize white light to the size of the ROI of the single molecule fits
+            ROI_initial = [1, 1, 270, 270];
+            whiteLight = whiteLight(ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1,ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1);
+            % rescale white light image to vary from 0 to 1
+            whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
+            [xWL yWL] = meshgrid((ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1) * nmPerPixel + wlShiftX, ...
+                (ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1) * nmPerPixel + wlShiftY);
         end
-        % resize white light to the size of the ROI of the single molecule fits
-        ROI_initial = [1, 1, 270, 270];
-        whiteLight = whiteLight(ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1,ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1);
-        % rescale white light image to vary from 0 to 1
-        whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
-        [xWL yWL] = meshgrid((ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1) * nmPerPixel + wlShiftX, ...
-            (ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1) * nmPerPixel + wlShiftY);
     end
-    
     
     %% Chose a desired parameter set for reconstruction
     dlg_title = 'Please Input Parameters';
@@ -811,6 +812,25 @@ while anotherpass == true
     
     
     %% ask user what region to plot in superresolution image
+    
+    if pass ~= 1
+        if whiteLightFile ~= 0
+            whiteLightInfo = imfinfo([whiteLightPath whiteLightFile]);
+            whiteLight = zeros(whiteLightInfo(1).Height, whiteLightInfo(1).Width);
+            % average white light images together to get better SNR
+            for a = 1:length(whiteLightInfo)
+                whiteLight = whiteLight + double(imread([whiteLightPath whiteLightFile], ...
+                    'Info', whiteLightInfo));
+            end
+            % resize white light to the size of the ROI of the single molecule fits
+            ROI_initial = [1, 1, 270, 270];
+            whiteLight = whiteLight(ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1,ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1);
+            % rescale white light image to vary from 0 to 1
+            whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
+            [xWL yWL] = meshgrid((ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1) * nmPerPixel + wlShiftX, ...
+                (ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1) * nmPerPixel + wlShiftY);
+        end
+    end
     
     if whiteLightFile ~= 0
         xRange = xWL(1,:);
@@ -1001,4 +1021,3 @@ saveas(gcf,[savePath saveFile(1:length(saveFile)-4) '_multicolorSMACM_2D.fig']);
 close all
 
 end
-
