@@ -431,7 +431,9 @@ while anotherpass == true
         
     clear corrzRange
     zLoc_IndexCorrected = zLoc * nSample/nOil;
-    zLoc_IndexCorrectedRaw = zLocRaw * nSample/nOil;
+    if exist('xLocRaw','var')
+        zLoc_IndexCorrectedRaw = zLocRaw * nSample/nOil;
+    end
     
     numPhotons = catPSFfits(goodFits,21);
 %     meanBkgnd = totalPSFfits(goodFits,15)*conversionFactor;
@@ -485,7 +487,7 @@ while anotherpass == true
     zLoc = zLoc(validPoints);
     zLoc_IndexCorrected = zLoc_IndexCorrected(validPoints);
     
-    if exist('xLocRaw')
+    if exist('xLocRaw','var')
         xLocPixRaw = xLocPixRaw(validPoints);
         yLocPixRaw = yLocPixRaw(validPoints); 
         xLocRaw = xLocRaw(validPoints);
