@@ -133,7 +133,9 @@ s.sigmaBounds = [1.0 1.5];
 % pixels relative to the original value of 160 nm / pix
 s.lobeDistBounds = [3.5 8]*160/s.nmPerPixel;   %[3.5 10]*160/s.nmPerPixel;
 % half-width of box to extract when fitting DHPSF images, units of integer pixels
-s.boxRadius = round(7*160/s.nmPerPixel);
+% it's independent of the magnification of the optical setup, so just
+% hard-code a radius for now
+s.boxRadius = 8;        % round(7*160/s.nmPerPixel);
 % smoothing filter width for identifying DHPSF SMs, units of pixels
 s.gaussianFilterSigma = 1.5*160/s.nmPerPixel;
 % minimum lateral distance between identified SMs, units of pixels
