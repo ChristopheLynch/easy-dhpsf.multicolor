@@ -566,7 +566,7 @@ set(hfig,'Visible','on');
         % update all dependent parameters
         s.sigmaBounds = [1.0 1.5]*160/s.nmPerPixel;
         s.lobeDistBounds = [3.5 10]*160/s.nmPerPixel;
-        s.boxRadius = round(7*160/s.nmPerPixel);
+        s.boxRadius = 8;        % round(7*160/s.nmPerPixel);
         s.gaussianFilterSigma = 1.5*160/s.nmPerPixel;
         s.minDistBetweenSMs = 7.5*160/s.nmPerPixel;
         s.projStatus(5) = false;

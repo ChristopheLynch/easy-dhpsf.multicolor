@@ -1026,7 +1026,7 @@ save([outputFilePrefix 'calibration.mat'], ...
     
 %% Generate template Stack of a chosen bead 
 
-templateSize = 2*round(10*160/nmPerPixel);  % 26;
+templateSize = 20;      % 2*round(10*160/nmPerPixel);  % 26;
 
 % make sure templateSize is an even number of pixels
 % if mod(templateSize,2)==1
