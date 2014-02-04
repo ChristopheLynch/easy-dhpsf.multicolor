@@ -659,7 +659,7 @@ for stack = selectedFiles % = 1:length(dataFile)
                     PSFfits(b,11) = -1006;
                 end
                 % normalized error within limit?
-                if PSFfits(b,10)*conversionFactor/PSFfits(b,15) > 3.0  || ...
+                if PSFfits(b,10)*conversionFactor/PSFfits(b,15) > 4.0  || ...
                         PSFfits(b,10)*conversionFactor/PSFfits(b,15) < 0.0
                     PSFfits(b,11) = -1007;
                 end
