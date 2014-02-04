@@ -388,7 +388,11 @@ set(hfig,'Visible','on');
         g = temp.g;
         r = temp.r;
         clear temp
-
+        if ~isfield(s,'nhaData') % to be backwards-compatible
+            s.nhaData = 0;
+            r.nhaData = 0;
+            g.nhaData = 0;
+        end
         updateGUI;
     end
     function saveProj
@@ -667,8 +671,16 @@ set(hfig,'Visible','on');
         updateGUI;
     end
     function buttonFitDebug_Callback(~,~) 
-        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
-        f_debugMoleculeFits(totalPSFfits)
+        [totalPSFfits, numFrames] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
+        if isfield(s,'threshFilePrefix') % backwards compatible before rev 56
+        f_debugMoleculeFits(totalPSFfits,numFrames,s.smacmRawFile,...
+            s.smacmRawPath,s.smacmDarkFile,s.smacmRawROI,s.templateIdxs,...
+            s.templateThreshs/10000,[s.threshFilePrefix{1} 'threshold output.mat'],...
+            s.gaussianFilterSigma,s.minDistBetweenSMs)
+        else
+            f_debugMoleculeFits(totalPSFfits,numFrames,s.smacmRawFile,...
+            s.smacmRawPath,s.smacmDarkFile,s.smacmRawROI);
+        end
         updateGUI;
     end
     % output controls

@@ -35,6 +35,10 @@ function [outputFilePrefix] = ...
 % precisely localized using a double gaussian fit and corrected for drift
 % using the results from f_trackFiducials.
 
+windowBG = false;
+windowSize = 200; % currently a 'radius' 
+% maybe try only going forward (more bleached, fewer SMs forward in time)
+
 if nhaData
     peakThreshold=peakThreshold*10000; %cancels out the call to divide in easy_dhpsf
     load(threshFile,'blankMask'); %retrieve mask for censoring data
@@ -342,15 +346,66 @@ for stack = selectedFiles % = 1:length(dataFile)
         length(ROI(1):ROI(1)+ROI(3)-1));
     numbkgndImg = 0;
     
-    for c=frames'
-        
+    if size(frames,1) > 1 % make sure it will work in the for loop (need 1xn)
+        frames = frames';
+    end
+    
+    for c=frames
+        if isempty(frames) % if [] has been selected for this file
+            break
+        end
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
         if nhaData
             data=data.*(~blankMask);
         end
         % subtract the background and continue
-        bkgndImg_curr = f_waveletBackground(data);
+        if windowBG 
+            %begAvg=tic;
+            relIdx = find(frames==c); % when indexing within 'frames'
+            if relIdx == 1 % generate window de novo
+                dataWindow = zeros(size(data));
+                numWinFrames = 0;
+
+                for bgFrSum = frames(max(1,relIdx-windowSize):min(end,relIdx+windowSize)) % don't go outside 'frames'
+                    if bgFrSum == c
+                        dataToSum = data; % already generated, faster to reference
+                    else 
+                        dataToSum = double(imread([dataPath dataFile{stack}],bgFrSum,'Info',fileInfo))-darkAvg;
+                        dataToSum=dataToSum(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
+                    end
+                    dataWindow = dataWindow+dataToSum;
+                    numWinFrames=numWinFrames+1;
+                end
+                dataWindow = dataWindow./numWinFrames; 
+            else % add the difference between last avg and this avg (in order to load minimum # frames)
+                dataWindow = dataWindow*numWinFrames; % retrieve sum of frames
+                oldEnds = [max(1,relIdx-1-windowSize),min(length(frames),relIdx-1+windowSize)]; % the edges of the window
+                newEnds = [max(1,relIdx-windowSize),min(length(frames),relIdx+windowSize)];
+                % reckon new
+                if oldEnds(1)==newEnds(1) && oldEnds(2)~=newEnds(2) % i.e. if both touch the beginning but do not touch the end
+                    numWinFrames = numWinFrames+1; % still expanding frames in window
+                    addFrame=double(imread([dataPath dataFile{stack}],newEnds(2),'Info',fileInfo))-darkAvg; % add the expanding end
+                    addFrame=addFrame(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
+                    subFrame = zeros(size(data)); % don't need to subtract yet
+                elseif oldEnds(1)~=newEnds(1) && oldEnds(2)==newEnds(2) % i.e. if they have hit the end, but not the beginning
+                    numWinFrames = numWinFrames-1; % contracting after hitting end
+                    addFrame = zeros(size(data));
+                    subFrame = double(imread([dataPath dataFile{stack}],oldEnds(1),'Info',fileInfo))-darkAvg;
+                    subFrame = subFrame(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
+                else % the window is as big as or larger than the #frames
+                    addFrame = zeros(size(data));
+                    subFrame = zeros(size(data));
+                end
+                dataWindow = dataWindow+addFrame-subFrame;
+                dataWindow = dataWindow / numWinFrames;
+            end
+            bkgndImg_curr = f_waveletBackground(dataWindow);
+            %time=toc(begAvg);
+            %disp(num2str(time/numWinFrames));
+        else
+            bkgndImg_curr = f_waveletBackground(data);
+        end
         bkgndImg = bkgndImg + bkgndImg_curr;
         numbkgndImg = numbkgndImg +1;
         data = data - bkgndImg_curr;

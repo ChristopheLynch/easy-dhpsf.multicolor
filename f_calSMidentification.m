@@ -490,7 +490,10 @@ for stack = selectedFiles
     numPSFfits = 0;
     startTime = tic;
 %     frameNum = 1;
-    for c = frames(end:-1:1)'
+    if size(frames,1) > 1 % make sure it will work in the for loop (need 1xn)
+        frames = frames';
+    end
+    for c = frames(end:-1:1)
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
