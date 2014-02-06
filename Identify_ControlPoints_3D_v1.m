@@ -8,7 +8,7 @@ function [] = Identify_ControlPoints_3D_v1()
 % stdX,stdY,stdZ,meanPhotons,numMeasurements,N/A]
 
 % Instrument specific parameters
-nmPerPixel = 125.78;
+% nmPerPixel = 125.78;
 roiSize = 270;
 
 
