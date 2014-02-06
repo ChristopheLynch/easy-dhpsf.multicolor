@@ -685,7 +685,7 @@ for a = 1:numFits_reflected
 end
 xlim([0 roiSize*nmPerPixel])
 ylim([0 roiSize*nmPerPixel])
-axis square
+axis square ij
 xlabel({'Reflected Channel'; ['Frame: ' num2str(cpFrames(frame))];[num2str(numFits_reflected), ' SM localizations']})
 plot([0 roiSize*nmPerPixel], [roiSize*nmPerPixel 0])
 plot([0 roiSize*nmPerPixel], [0 roiSize*nmPerPixel])
@@ -709,7 +709,7 @@ end
 
 xlim([(CCDChipSize-roiSize)*nmPerPixel CCDChipSize*nmPerPixel])
 ylim([(CCDChipSize-roiSize)*nmPerPixel CCDChipSize*nmPerPixel])
-axis square
+axis square ij
 xlabel({'Transmitted Channel'; ['Frame: ' num2str(cpFrames(frame))];[num2str(numFits_transmitted), ' SM localizations']})
 plot([(512-roiSize)*nmPerPixel CCDChipSize*nmPerPixel],...
     [CCDChipSize*nmPerPixel (512-roiSize)*nmPerPixel])
