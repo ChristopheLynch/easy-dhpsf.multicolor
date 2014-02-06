@@ -741,7 +741,7 @@ set(hfig,'Visible','on');
         % these match the numbers in f_fitSMs
 %         ampRatioLimit = 0.5;
 %         sigmaRatioLimit = 0.4;
-        f_processFits(totalPSFfits,numFrames,s.fitFilePrefix,fidTrackX, fidTrackY, fidTrackZ);
+        f_processFits(totalPSFfits,numFrames,s.fitFilePrefix,fidTrackX, fidTrackY, fidTrackZ, s.nmPerPixel);
 %         f_processFits(totalPSFfits,numFrames,ROI,conversionFactor,...
 %             s.sigmaBounds,s.lobeDistBounds,ampRatioLimit,sigmaRatioLimit,...
 %             s.nmPerPixel);
