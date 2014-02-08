@@ -403,6 +403,9 @@ for stack = selectedFiles % = 1:length(dataFile)
             bkgndImg_curr = f_waveletBackground(dataWindow);
             %time=toc(begAvg);
             %disp(num2str(time/numWinFrames));
+        elseif nhaData==true
+            % use median of all pixels as BG estimate
+            bkgndImg_curr = median(data(:)).*ones(size(data));
         else
             bkgndImg_curr = f_waveletBackground(data);
         end
