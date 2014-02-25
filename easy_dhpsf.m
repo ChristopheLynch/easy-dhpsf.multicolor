@@ -62,7 +62,7 @@ function easy_dhpsf()
 % widefield microscope. Tiff stacks of images are analyzed using template
 % matching followed by double-Gaussian fitting to extract estimates of the
 % molecule positions.
-s.nhaData=1;
+s.nhaData=0;
 
 
 %% global file locations

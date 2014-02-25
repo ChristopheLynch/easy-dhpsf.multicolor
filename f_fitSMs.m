@@ -43,7 +43,12 @@ if nhaData
     peakThreshold=peakThreshold*10000; %cancels out the call to divide in easy_dhpsf
     load(threshFile,'blankMask'); %retrieve mask for censoring data
 end
-
+if exist('threshFile')
+    load(threshFile,'usePolyROI')
+    if usePolyROI
+        load(threshFile,'FOVmask','FOVmask1','gaussFilt');
+    end
+end
 printOutputFrames = 0;
 
 if printOutputFrames == 1 % this will save all process images (correlation image, raw data, and reconstruction)
@@ -358,6 +363,15 @@ for stack = selectedFiles % = 1:length(dataFile)
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
         if nhaData
             data=data.*(~blankMask);
+        end
+        if usePolyROI
+            dataRing=data(FOVmask&~FOVmask1);
+            data(~FOVmask)=median(dataRing);
+            for i = 1:10
+            dataBlur=imfilter(data,gaussFilt,'replicate');
+            data(~FOVmask)=dataBlur(~FOVmask);
+            end
+            clear dataBlur
         end
         % subtract the background and continue
         if windowBG 
