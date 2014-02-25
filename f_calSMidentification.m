@@ -33,6 +33,13 @@ function [templateFrames, ROI, dataFile, dataPath, darkFile, logFile,...
 % matches. These are then used to judge an appropriate threshold for 
 % f_fitSMs. This module also sets the file and other parameters used for 
 % f_fitSMs, as well as some parameters for f_trackFiducials.
+% if this is true, select rect ROI for channel and poly for excluding fids,
+% edge of FoV outside iris, any other impinging 'non-image' feature
+usePolyROI = true;
+if nhaData
+    usePolyROI = true;
+end
+FOVmask = [];
 
 % Instrument Specific Parameters
 
@@ -392,7 +399,7 @@ for stack = selectedFiles
         avgImg = avgImg/avgImgFrames;
         
         hROI = figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
-        imagesc(avgImg);axis image;colormap hot;
+        imagesc(avgImg,[0 min(avgImg(:))+2*std(avgImg(:))]);axis image;colormap hot;
         if channel == 'g'
             ROI = imrect(gca,[1 1 270 270]);
         elseif channel == 'r'
@@ -426,14 +433,21 @@ for stack = selectedFiles
             
         close(hROI) % closes ROI selection
         
-        if nhaData
+        if usePolyROI
             hFOVmaskFig=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
             imagesc(avgImg(ROI(2):ROI(2)+ROI(4)-1, ...
-                ROI(1):ROI(1)+ROI(3)-1),[0 300]);
+                ROI(1):ROI(1)+ROI(3)-1),[0 min(avgImg(:))+2*std(avgImg(:))]);
             axis image;colorbar;colormap hot;
-            title('Select ROI of area to exclude');
-            blankMask = roipoly;
+            title('Select ROIpoly of area to keep');
+            [FOVmask, maskX, maskY] = roipoly;
+            xCenter=(max(maskX)+min(maskX))/2;
+            yCenter=(max(maskY)+min(maskY))/2;
+            x1=(maskX-xCenter)*0.9+xCenter;
+            y1=(maskY-yCenter)*0.9+yCenter;
+            FOVmask1=roipoly(avgImg(ROI(2):ROI(2)+ROI(4)-1, ...
+                ROI(1):ROI(1)+ROI(3)-1),x1,y1);
             close(hFOVmaskFig);
+            gaussFilt = fspecial('gaussian',100,25);
         end
     
         %% prepare template for template matching
@@ -497,8 +511,14 @@ for stack = selectedFiles
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
-        if nhaData
-            data=data.*(~blankMask);
+        if usePolyROI
+            dataRing=data(FOVmask&~FOVmask1);
+            data(~FOVmask)=median(dataRing);
+            for i = 1:10
+            dataBlur=imfilter(data,gaussFilt,'replicate');
+            data(~FOVmask)=dataBlur(~FOVmask);
+            end
+            clear dataBlur
         end
         % subtract the background and continue
         [bkgndImg,~] = f_waveletBackground(data);
