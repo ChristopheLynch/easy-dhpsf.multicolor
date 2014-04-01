@@ -26,8 +26,8 @@
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function [templateFrames, ROI, dataFile, dataPath, darkFile, logFile,...
-            logPath, EMGain, templateLocs, outputFilePrefix] = f_calSMidentification(calFile,calBeadIdx,...
-            templateFile, boxRadius,channel,sigmaBounds,gaussianFilterSigma,minDistBetweenSMs,nhaData)
+            logPath, EMGain, templateLocs, outputFilePrefix,nhaData] = f_calSMidentification(calFile,calBeadIdx,...
+            templateFile, boxRadius,channel,sigmaBounds,gaussianFilterSigma,minDistBetweenSMs)
 % f_calSMidentification is a module in easy_dhpsf that prepares the
 % templates from f_calDHPSF and uses them to generate a series of template
 % matches. These are then used to judge an appropriate threshold for 
@@ -36,9 +36,8 @@ function [templateFrames, ROI, dataFile, dataPath, darkFile, logFile,...
 % if this is true, select rect ROI for channel and poly for excluding fids,
 % edge of FoV outside iris, any other impinging 'non-image' feature
 usePolyROI = true;
-if nhaData
-    usePolyROI = true;
-end
+
+% initializing variables for ROI selection
 FOVmask = [];
 
 % Instrument Specific Parameters
@@ -214,6 +213,38 @@ for stack = selectedFiles
 %             error('User cancelled the program');
 %         end
         
+%inputdlg(prompt,title,nl,def,options)
+         temp = inputdlg({'Use (M)edian filtering, (W)avelet filtering or treat as (N)HA?',...
+                          'If median filtering, what sigma size in pix (0 for no smoothing)',...
+                          'If median filtering, what total window size in frames?',...
+                          'If median filtering, number of frames to "interpolate"',...
+                          'When fitting data, display raw (not background-subtracted) data?'},...
+                'Input filtering options',1, ...
+                {'M','15','101','5','1'});
+        filterType = temp{1};
+        if strcmp(filterType,'m')
+            filterType = 'M';
+        elseif strcmp(filterType,'w')
+            filterType = 'W';
+        elseif strcmp(filterType,'n')
+            filterType = 'N';
+        end
+        
+        medianBlurSigma = str2num(temp{2});
+        windowSize = str2num(temp{3});
+        interpVal = str2num(temp{4}); % number of frames to interpolate in median bg estimation. 1 uses each frame.
+        dispRaw = logical(str2num(temp{5}));
+        
+        if strcmp(filterType,'N')
+            nhaData = true;
+            medianFilter = false;
+        elseif strcmp(filterType,'M')
+            medianFilter = true;
+            nhaData = false;
+        else
+            medianFilter = false;
+            nhaData = false;
+        end
     end
     
     %% create output log filenames
@@ -442,14 +473,21 @@ for stack = selectedFiles
             [FOVmask, maskX, maskY] = roipoly;
             xCenter=(max(maskX)+min(maskX))/2;
             yCenter=(max(maskY)+min(maskY))/2;
-            x1=(maskX-xCenter)*0.9+xCenter;
-            y1=(maskY-yCenter)*0.9+yCenter;
+            x1=(maskX-xCenter)*0.95+xCenter;
+            y1=(maskY-yCenter)*0.95+yCenter;
             FOVmask1=roipoly(avgImg(ROI(2):ROI(2)+ROI(4)-1, ...
                 ROI(1):ROI(1)+ROI(3)-1),x1,y1);
             close(hFOVmaskFig);
-            gaussFilt = fspecial('gaussian',100,25);
         end
-    
+        
+        % a possible alternate way to do this automatically:
+%         blah=avgImg(ROI(2):ROI(2)+ROI(4)-1,ROI(1):ROI(1)+ROI(3)-1);
+%         for i = 5:5:95
+%             datapoint(i) = prctile(blah(:),i);
+%         end
+%         thresh=(mean(datapoint([5 30]))-min(blah(:)))/(max(blah(:))-min(blah(:)));
+%         bw=im2bw((blah-min(blah(:)))/(max(blah(:))-min(blah(:))),thresh);
+%         figure;imagesc(bw.*blah,[0 20])
         %% prepare template for template matching
         
         % pad template to same size as input
@@ -507,6 +545,15 @@ for stack = selectedFiles
     if size(frames,1) > 1 % make sure it will work in the for loop (need 1xn)
         frames = frames';
     end
+    
+    dataWindow = nan([2*floor(windowSize/2)+1,ROI(4),ROI(3)]);
+    if medianBlurSigma~=0
+        medBlurFilt = fspecial('gaussian',100,medianBlurSigma);
+    else
+        medBlurFilt=1;
+    end
+    lastFrame = nan;
+    
     for c = frames(end:-1:1)
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
@@ -514,14 +561,42 @@ for stack = selectedFiles
         if usePolyROI
             dataRing=data(FOVmask&~FOVmask1);
             data(~FOVmask)=median(dataRing);
-            for i = 1:10
-            dataBlur=imfilter(data,gaussFilt,'replicate');
-            data(~FOVmask)=dataBlur(~FOVmask);
-            end
-            clear dataBlur
+            % the below can smooth the data near the edge of the FOV -
+            % would be useful if using wavelet bg subtraction, e.g.
+%             for i = 1:10
+%             dataBlur=imfilter(data,gaussFilt,'replicate');
+%             data(~FOVmask)=dataBlur(~FOVmask);
+%             end
+%             clear dataBlur
         end
         % subtract the background and continue
-        [bkgndImg,~] = f_waveletBackground(data);
+        
+        if medianFilter
+            
+            % only run on first frame, or frames divisible by interpVal
+            if isnan(lastFrame) || c==interpVal*round(c/interpVal);
+                [bkgndImgMed, dataWindow] = f_medianFilter([dataPath dataFile{stack}], fileInfo, darkAvg, ROI, frames, c, windowSize, dataWindow,lastFrame);
+                lastFrame = c;
+            end
+            
+            bkgndImg = bkgndImgMed;
+            
+            
+            if medianBlurSigma~=0
+                bkgndImg(~FOVmask)=median(reshape(bkgndImg(~FOVmask1&FOVmask),[],1));
+                bkgndImg = imfilter(bkgndImg,medBlurFilt,'replicate');
+            end
+        elseif nhaData
+            % use median of all pixels as BG estimate
+            bkgndImg = median(data(:)).*ones(size(data));
+        else
+            bkgndImg = f_waveletBackground(data);
+        end
+        
+        if usePolyROI && medianFilter
+            bkgndImg(~FOVmask) = data(~FOVmask);
+        end
+        
         data = data - bkgndImg;
         
         dataFT = fft2(data,cropHeight,cropWidth);
@@ -630,7 +705,49 @@ for stack = selectedFiles
         end
         numPSFfits = numPSFfits+numPSFLocs;
         
+        
         %%  plot results of template matching and fitting
+        
+%         name = {'bkgndImg', 'data', 'data+bkgndImg'};
+%         dataToDraw = {bkgndImg, data, data+bkgndImg};
+%         for drawNum = 1:3
+%             draw = dataToDraw{drawNum};
+%             imwrite(ind2rgb(uint8(256*(draw-min(draw(:)))/(max(draw(:))-min(draw(:)))),hot(256)),[outputFilePrefix{1} name{drawNum} num2str(c) '.png'],'png')
+%         end
+%         if c/5 == round(c/5)
+%             figure('Visible','off');
+%             imagesc(bkgndImg); axis image; colormap hot; colorbar;
+%             title(['background image for frame ' num2str(c)]);
+%             saveas(gcf,[outputFilePrefix{1} 'exampleBG' num2str(c) '.png']);
+%             close(gcf)
+%             
+%             figure('Visible','off');
+%             imagesc(data+bkgndImg); axis image; colormap hot; colorbar;
+%             title(['raw data for frame ' num2str(c)]);
+%             saveas(gcf,[outputFilePrefix{1} 'exampleRaw' num2str(c) '.png']);
+%             close(gcf)
+%             
+%             figure('Visible','off');
+%             imagesc(data); axis image; colormap hot; colorbar;
+%             title(['bgsub data for frame ' num2str(c)]);
+%             saveas(gcf,[outputFilePrefix{1} 'exampleBGsub' num2str(c) '.png']);
+%             close(gcf)
+%             
+%             waveBG = f_waveletBackground(data+bkgndImg);
+%             
+%             figure('Visible','off');
+%             imagesc(waveBG); axis image; colormap hot; colorbar;
+%             title(['wavelet BG for frame ' num2str(c)]);
+%             saveas(gcf,[outputFilePrefix{1} 'exampleWaveBG' num2str(c) '.png']);
+%             close(gcf)
+%             
+%             figure('Visible','off');
+%             imagesc(data+bkgndImg-waveBG); axis image; colormap hot; colorbar;
+%             title(['data - wavelet BG for frame ' num2str(c)]);
+%             saveas(gcf,[outputFilePrefix{1} 'exampleWaveBGImg' num2str(c) '.png']);
+%             close(gcf)
+%         end
+%         clear name dataToDraw drawNum draw
         
         set(0,'CurrentFigure',hMatchFig);
         subplot('Position',[0.025 0.025 .9/2 .95],'parent',hMatchFig);
@@ -639,7 +756,7 @@ for stack = selectedFiles
             [num2str(numPSFLocs) ' matches found']});
         
         subplot('Position',[0.525 0.025 .9/2 .95],'parent',hMatchFig);
-        imagesc(data);axis image;colormap hot;
+        imagesc(data); axis image;colormap hot;
         hold on;
         for b=1:numPSFLocs
             plot(PSFLocs(b,1), PSFLocs(b,2), 'o', ...
@@ -647,7 +764,7 @@ for stack = selectedFiles
                 'MarkerEdgeColor', templateColors(PSFLocs(b,3),:));
         end
         hold off;
-        title({['Frame ' num2str(c) ': raw data - darkAvg counts'] ...
+        title({['Frame ' num2str(c) ': raw data - bkgnd & dark offset'] ...
             ['ROI [xmin ymin width height] = ' mat2str(ROI)]});
 
         drawnow;

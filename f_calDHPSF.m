@@ -36,9 +36,9 @@ function [outputFilePrefix, numBeads] = ...
 
 % Instrument Specific Parameters
 
-dlg_title = 'Set EM Gain';
-prompt = { 'EM Gain (1 if no gain):' }; 
-def = { '300' };
+dlg_title = 'Set EM Gain, background subtraction type';
+prompt = { 'EM Gain (1 if no gain):','Use wavelet subtraction?' }; 
+def = { '300','0' };
 blurSize = 0.5*160/nmPerPixel;
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
@@ -50,7 +50,9 @@ if EMGain < 1 || isnan(EMGain)
 end
 
 % whether to use wavelet background subtraction, or subtract mean of image
-useWaveSub = 1;
+% Off by default to minimize any possible change to shape of
+% templates.
+useWaveSub = logical(str2num(inputdialog{2}));
 
 conversionFactor = conversionGain/EMGain;
 ampRatioLimit = 0.5;
@@ -93,7 +95,11 @@ if isequal(logFile,0)
    error('A sequence log file must be specified for the DHPSF calibration');
 end
 
-
+% Possible alternative way: subtract the background from a FoV with no
+% beads, but same illumination
+% if ~useWaveSub
+%     [bgFile, bgPath] = uigetfile({'*.tif';'*.*'},'Open image stack with background (illuminated as in calibration)');
+% end
 numFiles = length(fileNames);
 dataFileInfo = imfinfo(dataFile);
 numFrames = length(dataFileInfo);
@@ -275,7 +281,8 @@ for a=1:size(sifLogData,1)-2
     if useWaveSub
         bkgndImg = f_waveletBackground(data);
     else
-        bkgndImg = repmat(mean(data(:)),size(data));
+        % subtract median to get rough idea of #photons of fiducial
+        bkgndImg = repmat(median(data(:)),size(data));
     end
     data = data - bkgndImg;
 
@@ -1048,9 +1055,11 @@ for bead = 1:numBeads
             ROI(1):ROI(1)+ROI(3)-1);
 
             % subtract the background and continue
-            bkgndImg = f_waveletBackground(data);
-            data = data - bkgndImg;    
-
+            if useWaveSub
+                bkgndImg = f_waveletBackground(data);
+                data = data - bkgndImg;    
+            end
+            
             good = PSFfits(n,:,1)==b & PSFfits(n,:,2)==bead;
             x_Pos = round(PSFfits(n,good,14)/nmPerPixel);
             y_Pos = round(PSFfits(n,good,15)/nmPerPixel);
