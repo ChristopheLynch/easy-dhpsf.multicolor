@@ -373,6 +373,7 @@ for stack = selectedFiles % = 1:length(dataFile)
         if isempty(frames) % if [] has been selected for this file
             break
         end
+        currIdx = find(frames==c); % current index within 'frames'
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
         if nhaData
@@ -392,7 +393,7 @@ for stack = selectedFiles % = 1:length(dataFile)
         % subtract the background and continue
         if medianFilter
             
-            if isnan(lastFrame) || c==interpVal*round(c/interpVal);
+            if isnan(lastFrame) || currIdx==interpVal*round(currIdx/interpVal);
                 [bkgndImgMed, dataWindow] = f_medianFilter([dataPath dataFile{stack}], fileInfo, darkAvg, ROI, frames, c, windowSize, dataWindow,lastFrame);
                 lastFrame = c;
             end
@@ -737,8 +738,8 @@ for stack = selectedFiles % = 1:length(dataFile)
             saveas(hSMFits, ['output images' filesep 'frame ' num2str(c) '.tif']);
         end
         
-        meanSignal(c) = mean(data(FOVmask));
-        meanBG(c) = mean(bkgndImg(FOVmask));
+        meanSignal(currIdx) = mean(data(FOVmask));
+        meanBG(currIdx) = mean(bkgndImg(FOVmask));
     end
     elapsedTime = toc(startTime);
     totalPSFfits = totalPSFfits(1:numPSFfits,:);
