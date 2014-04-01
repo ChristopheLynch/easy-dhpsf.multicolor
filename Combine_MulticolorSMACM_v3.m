@@ -16,6 +16,7 @@ if ~isequal(dataFile,0)
     load(dataFile)
 end
 
+
 if ~registrationComplete
     
     %% Ask user for relevant datafiles
@@ -300,7 +301,10 @@ if ~registrationComplete
     fidTracksX_denoised_greenFrames = nan(size(fidTracksX,1),size(fidTracksX,2));
     fidTracksY_denoised_greenFrames = nan(size(fidTracksX,1),size(fidTracksX,2));
     fidTracksZ_denoised_greenFrames = nan(size(fidTracksX,1),size(fidTracksX,2));
-
+    
+    frames_green(frames_green>length(fidTracksX))=[]; % in case the sif log goes too long
+    frames_red(frames_red>length(fidTracksX))=[];
+    
     [fidTracksX_denoised_greenFrames(frames_green,transformedDataSet),...
         fidTracksY_denoised_greenFrames(frames_green,transformedDataSet),...
         fidTracksZ_denoised_greenFrames(frames_green,transformedDataSet)] = f_waveletFidTracks(...
@@ -473,9 +477,9 @@ if ~registrationComplete
 
     %% Center the last frames of the chosen denoised fiducial track
 
-    syncFrames = find(~isnan(fidTracksX(:,1)));
+    syncFrames = find(~isnan(fidTracksX_shifted_denoised(:,chosenFidTrack))); % old version (~isnan on fidTracksX) throws an error sometimes, as nans creep into the fidTracksX_... downstream arrays sometimes
     syncFrames = syncFrames(end-(numSyncFrames-1):end);
-
+    
     avgDevX = fidTracksX_shifted_denoised(:,chosenFidTrack) - mean(fidTracksX_shifted_denoised(syncFrames,chosenFidTrack));
     avgDevY = fidTracksY_shifted_denoised(:,chosenFidTrack) - mean(fidTracksY_shifted_denoised(syncFrames,chosenFidTrack));
     avgDevZ = fidTracksZ_shifted_denoised(:,chosenFidTrack) - mean(fidTracksZ_shifted_denoised(syncFrames,chosenFidTrack));
@@ -534,6 +538,8 @@ if ~registrationComplete
     end 
 
     %% Show the difference between the registered fiducial tracks
+    if ~exist('tformChan') % this currently doesn't work unless transform second dataset
+    
     figure_h_c = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
@@ -592,7 +598,7 @@ if ~registrationComplete
     legend({['offset = ' num2str(avg),...
         ' +/- ' num2str(stdev) ' nm']; ['interpolated TRE_3_D']})
     clear avg
-    
+    end
     %% Show the difference between the denoised and fused fiducial tracks
     % this uses the variables 'fidTracksX_denoised' and so on, which aren't
     % defined...?
@@ -691,15 +697,17 @@ if ~registrationComplete
     savePath = [savePath saveFile '/'];
     mkdir(savePath);
     
-    saveas(figure_h_a,[savePath '3DFidCorrelation.fig']);
-    saveas(figure_h_a,[savePath '3DFidCorrelation.png']);
+%     saveas(figure_h_a,[savePath '3DFidCorrelation.fig']);
+%     saveas(figure_h_a,[savePath '3DFidCorrelation.png']);
     close(figure_h_a)
     saveas(figure_h_b,[savePath 'XYZFidTracks.fig']);
     saveas(figure_h_b,[savePath 'XYZFidTracks.png']);
     close(figure_h_b)
+    if exist('figure_h_c')
     saveas(figure_h_c,[savePath 'XYZFidMisregistration.fig']);
     saveas(figure_h_c,[savePath 'XYZFidMisregistration.png']);
     close(figure_h_c)
+    end
 %     saveas(figure_h_d,[savePath 'XYZFidMisregistration_denoised.fig']);
 %     saveas(figure_h_d,[savePath 'XYZFidMisregistration_denoised.png']);
 %     close(figure_h_d)
@@ -713,7 +721,9 @@ if ~registrationComplete
     tform.TRE_full = TRE_full;
     tform.matched_cp_reflected = matched_cp_reflected;
     tform.matched_cp_transmitted = matched_cp_transmitted	;
-    tform.matched_cp_transmitted_trans = matched_cp_transmitted_trans;
+    if exist('matched_cp_transmitted_trans') % is this needed?
+        tform.matched_cp_transmitted_trans = matched_cp_transmitted_trans;
+    end
     registrationComplete = true
     
     clear FRE TRE FRE_full TRE_full matched_cp_reflected matched_cp_transmitted matched_cp_transmitted_trans
@@ -731,7 +741,7 @@ end
 
 %% Display the results the final fused SMACM data
 useTimeColors = 0;
-frameRange = [1 100000];
+frameRange = [1, 100000; 1, 100000];
 numPhotonRange = [0 100000];
 
 dlg_title = 'Please Input Parameters';
@@ -740,7 +750,7 @@ prompt = {  'Pixel size (in nm)',...
     'White Light Shift X (in nm)',...
     'White Light Shift Y (in nm)',...
     };
-def = {    '125.78', ...
+def = {    num2str(nmPerPixel), ...
     '30', ...
     num2str(dataSets(untransformedDataSet).wlShift(1)), ...
     num2str(dataSets(untransformedDataSet).wlShift(2)), ...
@@ -770,7 +780,11 @@ while anotherpass == true
                     'Info', whiteLightInfo));
             end
             % resize white light to the size of the ROI of the single molecule fits
-            ROI_initial = [1, 1, 270, 270];
+            if ~exist('tformChan') || strcmp(tformChan,'r') || strcmp(tformChan,'R')
+                ROI_initial = [1, 1, min(350,size(whiteLight,1)-1), min(350,size(whiteLight,2)-1)];
+            elseif strcmp(tformChan,'y') || strcmp(tformChan,'Y')
+                ROI_initial = [200, 200, size(whiteLight,1)-200, size(whiteLight,2)-200];
+            end
             whiteLight = whiteLight(ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1,ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1);
             % rescale white light image to vary from 0 to 1
             whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
@@ -785,8 +799,10 @@ while anotherpass == true
         'Temporal Color Coding',...
         'White light shift X (in nm)',...
         'White light shift Y (in nm)',...
-        'First frame',...
-        'Last frame',...
+        'First frame (first channel)',...
+        'Last frame (first channel)',...
+        'First frame (second channel)',...
+        'Last frame (second channel)',...
         'Number of photons lower bound',...
         'Number of photons upper bound',...
         };
@@ -795,8 +811,10 @@ while anotherpass == true
         num2str(useTimeColors), ...
         num2str(wlShiftX), ...
         num2str(wlShiftY), ...
-        num2str(frameRange(1)), ...
-        num2str(frameRange(2)), ...
+        num2str(frameRange(1,1)), ...
+        num2str(frameRange(1,2)), ...
+        num2str(frameRange(2,1)), ...
+        num2str(frameRange(2,2)), ...
         num2str(numPhotonRange(1)), ...
         num2str(numPhotonRange(2)), ...
         };
@@ -807,8 +825,9 @@ while anotherpass == true
     useTimeColors = str2double(inputdialog{2});
     wlShiftX = str2double(inputdialog{3});
     wlShiftY = str2double(inputdialog{4});
-    frameRange = [str2double(inputdialog{5}) str2double(inputdialog{6})];
-    numPhotonRange = [str2double(inputdialog{7}) str2double(inputdialog{8})];
+    frameRange = [str2double(inputdialog{5}) str2double(inputdialog{6});...
+                  str2double(inputdialog{7}) str2double(inputdialog{8})];
+    numPhotonRange = [str2double(inputdialog{9}) str2double(inputdialog{10})];
     
     
     %% ask user what region to plot in superresolution image
@@ -878,9 +897,10 @@ while anotherpass == true
         yLoc = dataSets(i).yLoc_driftCorr;
         zLoc = dataSets(i).zLoc_driftCorr;
         zLoc_indexCorr = dataSets(i).zLoc_driftCorr;
+        frameNum = dataSets(i).frameNum;
         
         validPoints = inpolygon(xLoc,yLoc,xi, yi);
-        
+        validPoints = validPoints & frameNum >= frameRange(i,1) & frameNum <= frameRange(i,2);
         xLoc = xLoc(validPoints);
         yLoc = yLoc(validPoints);
         zLoc = zLoc(validPoints);
@@ -899,6 +919,10 @@ while anotherpass == true
         croppedDataSet.numPhotons = dataSets(i).numPhotons(validPoints);
         croppedDataSet.meanBkgnd = dataSets(i).meanBkgnd(validPoints);
         if dataSets(i).transformedDataset == 1
+            if ~exist('F_FRE')&&exist('tform')
+                F_FRE = tform.interpolationObjects.F_FRE;
+                F_TRE = tform.interpolationObjects.F_TRE;
+            end
             interpolated_FRE = F_FRE(xLoc,yLoc,zLoc);
             interpolated_TRE = F_TRE(xLoc,yLoc,zLoc);
             croppedDataSet.interpolated_FRE = interpolated_FRE;
@@ -989,7 +1013,7 @@ while anotherpass == true
 end
 
 %% clean up
-
+if exist('F_FRE_X') % this is a kludge to allow reopening old outputs from this function
 tform.interpolationObjects.F_FRE = F_FRE;
 tform.interpolationObjects.F_FRE_X = F_FRE_X;
 tform.interpolationObjects.F_FRE_Y = F_FRE_Y;
@@ -998,7 +1022,7 @@ tform.interpolationObjects.F_TRE = F_TRE;
 tform.interpolationObjects.F_TRE_X = F_TRE_X;
 tform.interpolationObjects.F_TRE_Y = F_TRE_Y;
 tform.interpolationObjects.F_TRE_Z = F_TRE_Z;
-
+end
 clear F_FRE F_FRE_X F_FRE_Y F_FRE_Z F_TRE F_TRE_X F_TRE_Y F_TRE_Z
 clear a anotherpass bead croppedDataSet def dlg_title f h i
 clear interpolated_FRE interpolated_FREs interpolated_TRE interpolated_TREs
