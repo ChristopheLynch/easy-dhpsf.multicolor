@@ -23,7 +23,7 @@ if isequal(tform_mode, 'globalquadratic')
     
     trans_cp_channel2 = transformData(cp_channel2(keep,:),tform);
         scatter3(cp_channel1(keep,1), cp_channel1(keep,2), cp_channel1(keep,3))
-        title({'Reflected Channel';'Channel 1'})
+        title({'Reference Channel';'Channel 1'})
         hold on
         scatter3(trans_cp_channel2(:,1), trans_cp_channel2(:,2), trans_cp_channel2(:,3), 10, 'filled')
         hold off
@@ -82,25 +82,25 @@ if figures
     if size(cp_channel1,2)==2
         subplot(2,2,1)
         scatter(cp_channel1(:,1), cp_channel1(:,2))
-        title({'Reflected Channel';'Channel 1'})
+        title({'Reference Channel';'Channel 1'})
         hold on
         scatter(cp_channel2_trans(:,1), cp_channel2_trans(:,2), 10, 'filled')
         hold off
         axis square
         subplot(2,2,2)
         scatter(cp_channel2(:,1), cp_channel2(:,2))
-        title({'Transmitted Channel';'Channel 2'})
+        title({'Target Channel';'Channel 2'})
         axis square
     elseif size(cp_channel1,2)==3
         subplot(2,2,1)
         scatter3(cp_channel1(:,1), cp_channel1(:,2), cp_channel1(:,3))
-        title({'Reflected Channel';'Channel 1'})
+        title({'Reference Channel';'Channel 1'})
         hold on
         scatter3(cp_channel2_trans(:,1), cp_channel2_trans(:,2), cp_channel2_trans(:,3), 10, 'filled')
         hold off
         subplot(2,2,2)
         scatter3(cp_channel2(:,1), cp_channel2(:,2), cp_channel2(:,3))
-        title({'Transmitted Channel';'Channel 2'})
+        title({'Target Channel';'Channel 2'})
     end
     
     subplot(2,2,3)

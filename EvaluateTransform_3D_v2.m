@@ -5,6 +5,10 @@ function [] = EvaluateTransform_3D_v2()
 
 % Ask user for relevant datafiles
 
+if matlabpool('size')
+    matlabpool('close')
+end
+
 [CPFile, CPPath] = uigetfile({'*.mat';'*.*'},'Open data file');
 if isequal(CPFile,0)
     error('User cancelled the program');
@@ -55,7 +59,8 @@ while anotherpass == true
         'Global weight fucntion scale factor end'...
         'Global weight fucntion scale factor stepsize',...
         'How many CPU cores? (Leave one core unused, if you want to still use this machine for other stuff',...
-        'How many control points used for FRE and TRE evaluation'...
+        'How many control points used for FRE and TRE evaluation',...
+        'Will you transform the (Y)ellow or the (R)ed channel?'...
         };
     def = {     num2str(iStart), ...
         num2str(iEnd), ...
@@ -68,6 +73,7 @@ while anotherpass == true
         num2str(kStep), ...
         num2str(nCores), ...
         num2str(nCP) ...
+        'R'
         };
     num_lines = 1;
     inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
@@ -83,16 +89,28 @@ while anotherpass == true
     kStep = str2double(inputdialog{9});
     nCores = str2double(inputdialog{10});
     nCP = str2double(inputdialog{11});
+    tformChan = inputdialog{12};
     
     %% Find the optimal transformation parameters
     
+    if any(ismember(tformChan,'y')|ismember(tformChan,'Y'))
+        matched_cp_target = matched_cp_reflected; % the channel/CP to be transformed
+        matched_cp_reference = matched_cp_transmitted; % the channel/CP to be transformed 'into'
+    elseif any(ismember(tformChan,'r')|ismember(tformChan,'R'));
+        matched_cp_target = matched_cp_transmitted;
+        matched_cp_reference = matched_cp_reflected;
+    else
+        warning('Incorrect channel input! Defaulting to transforming red.')
+        matched_cp_target = matched_cp_transmitted;
+        matched_cp_reference = matched_cp_reflected;
+    end
 %     step = floor(size(matched_cp_transmitted,1)/1000);
 %     keep = 1:step:size(matched_cp_transmitted,1);     % to accelerate the computation, reduce number of points
 %     keep = randi(size(matched_cp_transmitted,1),[nCP,1]);   % this generated duplicates      
-    keep = randperm(size(matched_cp_transmitted,1), nCP)';
+    keep = randperm(size(matched_cp_target,1), nCP)';
     figure
-    scatter3(matched_cp_reflected(keep,5), matched_cp_reflected(keep,6), matched_cp_reflected(keep,7))
-    title('Inspect averaged bead positions in reflected channel. Press any key to continue')
+    scatter3(matched_cp_reference(keep,5), matched_cp_reference(keep,6), matched_cp_reference(keep,7))
+    title('Inspect averaged bead positions in reference channel. Press any key to continue')
     pause
         
     clear FRE TRE FRE_full TRE_full
@@ -111,7 +129,7 @@ while anotherpass == true
                 
                 startTime = tic;
                 [~, ~, FRE(a,b,c), TRE(a,b,c), ~, ~] = custom_transformation(...
-                    matched_cp_reflected(keep,5:7),matched_cp_transmitted(keep,5:7),...
+                    matched_cp_reference(keep,5:7),matched_cp_target(keep,5:7),...
                     'lwquadratic',i,'Gaussian',j,k,false);
                 elapsedTime = toc(startTime)
                 
@@ -243,8 +261,8 @@ matlabpool('open', nCores)
 startTime = tic;
 
 % Beads in PVA from 20120814
-[tform, matched_cp_transmitted_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
-    matched_cp_reflected(:,5:7),matched_cp_transmitted(:,5:7),...
+[tform, matched_cp_target_trans, FRE, TRE, FRE_full, TRE_full] = custom_transformation(...
+    matched_cp_reference(:,5:7),matched_cp_target(:,5:7),...
     'lwquadratic',nControlPoints,'Gaussian',kthNeighbor,globalScale,true);
 
 % Transform from 20120703
@@ -274,7 +292,7 @@ startTime = tic;
 elapsedTime = toc(startTime)
 matlabpool close
 
-deviation = matched_cp_transmitted_trans - matched_cp_reflected(:,5:7);
+deviation = matched_cp_target_trans - matched_cp_reference(:,5:7);
 mean_deviation = mean(deviation,1)
 std_deviation = std(deviation,1)
 
@@ -283,22 +301,22 @@ saveas(gcf,['Transform_' tform.method '_RegistrationError.png']);
 
 save('EvaluateTransform_3D_workspace.mat');
 save(['3D_Transform_' tform.method '.mat'], 'tform', 'matched_cp_reflected', 'matched_cp_transmitted',...
-    'matched_cp_transmitted_trans','FRE', 'TRE', 'FRE_full', 'TRE_full', 'nCores',...
-    'nControlPoints', 'kthNeighbor', 'globalScale',...
-    'matched_cp_reflected', 'matched_cp_transmitted', 'matched_cp_transmitted_trans');
+    'FRE', 'TRE', 'FRE_full', 'TRE_full', 'nCores','nControlPoints',...
+    'kthNeighbor', 'globalScale', 'matched_cp_target_trans',...
+    'matched_cp_reference', 'matched_cp_target', 'tformChan');
 
 %% Generate Figures
 load('EvaluateTransform_3D_workspace.mat');
 
 figure
 subplot(1,2,2)
-scatter3(matched_cp_reflected(:,5),matched_cp_reflected(:,6),matched_cp_reflected(:,7),...
+scatter3(matched_cp_reference(:,5),matched_cp_reference(:,6),matched_cp_reference(:,7),...
     20,TRE_full(:,1),'filled')
 title('TRE Spatial Distribution');
 colorbar;
 
 subplot(1,2,1)
-scatter3(matched_cp_reflected(:,5),matched_cp_reflected(:,6),matched_cp_reflected(:,7),...
+scatter3(matched_cp_reference(:,5),matched_cp_reference(:,6),matched_cp_reference(:,7),...
     20,FRE_full(:,1),'filled')
 title('FRE Spatial Distribution');
 colorbar;
