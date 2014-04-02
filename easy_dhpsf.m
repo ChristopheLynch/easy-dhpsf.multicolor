@@ -90,7 +90,8 @@ s.calFilePrefix = '';
 s.fidFilePrefix = {};
 % DHPSF SM fit data location
 s.fitFilePrefix = {};
-
+% DHPSF threshold data save location
+s.threshFilePrefix = {};
 %% global fitting parameters
 % status of fitting project: 
 % cal, fid, thresh, template match, saved output, saved project
@@ -600,10 +601,10 @@ set(hfig,'Visible','on');
     function buttonThreshRun_Callback(~,~) 
         [s.templateIdxs,s.smacmRawROI,s.smacmRawFile, s.smacmRawPath, ...
              s.smacmDarkFile, s.smacmSifFile, s.smacmSifPath, s.smacmEMGain,...
-             s.templateLocs,s.threshFilePrefix] = f_calSMidentification(...
+             s.templateLocs,s.threshFilePrefix,s.nhaData] = f_calSMidentification(...
              [s.calFilePrefix 'calibration.mat'],...
              s.calBeadIdx, [s.calFilePrefix 'bead ' num2str(s.calBeadIdx) ' templates.mat'],...
-            s.boxRadius,s.channel,s.sigmaBounds,s.gaussianFilterSigma,s.minDistBetweenSMs,s.nhaData);
+            s.boxRadius,s.channel,s.sigmaBounds,s.gaussianFilterSigma,s.minDistBetweenSMs);
         s.templateThreshs = zeros(length(s.smacmRawFile),length(s.templateIdxs));
         
         s.projStatus(2) = true;
