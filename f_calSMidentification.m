@@ -166,13 +166,17 @@ for stack = selectedFiles
 %             end
             templateSize = size(template,2);
 %         end
-        
+        clear templateFrames 
         load(calFile);
+        
+        if ~exist('templateFrames'); % if already calculated
         goodFit_forward = logical(squeeze(goodFit_f(1,calBeadIdx,:)));
         % compute templates to use based upon fitted DG angles
+        
+        
         templateFrames = interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),...
             1:length(meanAngles(1,calBeadIdx,goodFit_forward)),-60:30:90,'nearest'); %90:-30:-60
- 
+        end
         % if some angles are out of range, use the ends of the template
         % stack. first determine whether frames are increasing or
         % decreasing so the the 'ends' are chosen correctly.
@@ -515,7 +519,7 @@ for stack = selectedFiles
         % more heavily since SNR is higher there
         gaussianFilter = abs(fft2(fspecial('gaussian', [cropHeight cropWidth], gaussianFilterSigma)));
         
-    end
+    end % end of the prep that is done only for first file.
     
     %% Identify frames to analyze when limiting by sif log
 
