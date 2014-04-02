@@ -40,9 +40,10 @@ end
 
 %% Find control point candidates
 
-[ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasurement] = findCPCandidates(...
+[ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasurement,frameAvgStart] = findCPCandidates(...
     logPath, logFile, totalPSFfits_reflected, totalPSFfits_transmitted );
-
+% PSFfits_reflected & _transmitted: [frameNum xLoc yLoc zLoc sX sY sZ
+% signal photons, mean background photons/pix, #beads-in-frame]
 save('Identify_ControlPoints_3D_workspace.mat');
 
 %% Calulate the average positions of beads at each stationary point
@@ -50,7 +51,7 @@ save('Identify_ControlPoints_3D_workspace.mat');
 load('Identify_ControlPoints_3D_workspace.mat');
 
 [ Locs_reflected, Locs_transmitted ] = avgBeadPos(...
-    PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasurement);
+    PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasurement,frameAvgStart);
 
 
 outputFilePrefix = [reflectedPath filesep 'FilteredLocalizations_std_' ...
@@ -170,10 +171,12 @@ save([outputFilePrefix 'Identify_ControlPoints_3D_output.mat']);
 end
 
 %% ---------------------------------------------------------------------------------------------
-function [ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasurement] = findCPCandidates(...
+function [ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasurement,frameAvgStart] = findCPCandidates(...
     logPath, logFile, totalPSFfits_reflected, totalPSFfits_transmitted )
-% This function isolates frames/localizations when there was no xyz motion
-% These are candidates for control point localizations
+% This function isolates frames/localizations when there was no xyz motion,
+% based on the .sif log. Only filters based on frames.
+% These are candidates for control point localizations, stored in
+% PSFfits_reflected and PSFfits_transmitted.
 
 %% Ask for user input
 dlg_title = 'Please Input Parameters';
@@ -206,7 +209,7 @@ numFrames = size(sifLogData,1);
 PSFfits_reflected = [];
 PSFfits_transmitted = [];
 
-%% only keep localization when there was no xyz motion
+%% only keep localization when there was no xyz motion (based on .sif log)
 for frame = 1:numFrames
     if logical(sum(frame == validFrames))
  
@@ -228,14 +231,15 @@ end
 
 %% --------------------------------------------------------------------------------------------- 
 function [ Locs_reflected, Locs_transmitted ] = avgBeadPos(...
-    PSFfits_reflected, PSFfits_transmitted, validFrames, framesToAverage )
+    PSFfits_reflected, PSFfits_transmitted, validFrames, framesToAverage,frameStart)
 % This function calulates the average positions of beads at each stationary point.
 % Control point localizations that are too close together ( currently 100 nm) are discarded.
 % Control point localizations can be filtered according to localization
 % precision and number of measurements of their localization.
 % The function is specific to the current format/sequence of the log file (might need to be changed). 
-
-transitionFrames = validFrames([1;find(diff(validFrames)-1)+1]);
+% the averaged localizations are called 'Locs_reflected' and
+% '_transmitted.'
+transitionFrames = validFrames([1;find(diff(validFrames)-1)+1]); % the frames after validFrames increases by more than 1
 
 % Reflected Channel
 Locs_reflected = [];
@@ -243,16 +247,18 @@ windowDiffRef = [];
 
 for i = 1:length(transitionFrames)
     
-    frameRange = [transitionFrames(i), transitionFrames(i)+(framesToAverage-3)];
+    % frameRange goes from frame after a jump and is as long as (total # frames
+    % acquired on the camera-the frame within that window where averaging starts)
+    frameRange = [transitionFrames(i), transitionFrames(i)+(framesToAverage-frameStart)];
     
     temp_reflected = PSFfits_reflected(PSFfits_reflected(:,1)>=frameRange(1) ...
         & PSFfits_reflected(:,1)<=frameRange(2),:);
     
-    if size(temp_reflected,1) <= 1
+    if size(temp_reflected,1) <= 1 % skip if only one frame in window has any beads
         continue
     else
         
-        numBeads = max(temp_reflected(:,10));
+        numBeads = max(temp_reflected(:,10)); % max beads of any frame in window
         meanX = zeros(numBeads,1);
         meanY = zeros(numBeads,1);
         meanZ = zeros(numBeads,1);
@@ -269,7 +275,7 @@ for i = 1:length(transitionFrames)
         
         % identify the frames that have the maximum number of beads
         maxBeadFrame = temp_reflected(temp_reflected(:,10)==numBeads,1);
-        buffer = 100;                                       % this parameter might need to be adjustable 
+        buffer = 100; % XY radius, nm                       % this parameter might need to be adjustable 
                                                             % depending on the precision of the measurement 
                                                             % and the density of control points
         beads = 0;
@@ -284,14 +290,15 @@ for i = 1:length(transitionFrames)
                 continue
             else
                 % determine how many times each bead was measured at this position
-                measurements = temp_reflected(:,2)<=x+buffer ...
-                    & temp_reflected(:,2)>=x-buffer ...
-                    & temp_reflected(:,3)<=y+buffer ...
-                    & temp_reflected(:,3)>=y-buffer;
+                measurements = (temp_reflected(:,2)-repmat(x,size(temp_reflected,1),1)).^2+...
+                               (temp_reflected(:,3)-repmat(y,size(temp_reflected,1),1)).^2 < buffer^2;
+%                     & temp_reflected(:,2)>=x-buffer ...
+%                     & temp_reflected(:,3)<=y+buffer ...
+%                     & temp_reflected(:,3)>=y-buffer;
                 numMeasurements(j) = sum(measurements);
-                if numMeasurements(j) > framesToAverage-3+1  % two overlapping beads, 
-                                                             % these parameters are specific to the 
-                                                             % current log file format
+                % note: why not just look and see if we have multiple
+                % measurements of the same frame number?
+                if numMeasurements(j) > framesToAverage-frameStart+1  % two overlapping beads (more beads within the spatial area than frames)
                     continue
                 end
                 
@@ -328,7 +335,7 @@ for i = 1:length(transitionFrames)
         %throw away duplicate entries that may occur due to proximity of
         %two beads
         if ~isempty(tempArray)
-            tempArray = sortrows(tempArray,5);
+            tempArray = sortrows(tempArray,5); % meanX
             temp = diff(tempArray(:,5))==0;
             badFit = logical(zeros(size(tempArray,1),1));
             badFit(1:size(temp)) = temp;
@@ -350,7 +357,9 @@ Locs_transmitted = [];
 windowDiffTrans = [];
 for i = 1:length(transitionFrames)
     
-    frameRange = [transitionFrames(i), transitionFrames(i)+(framesToAverage-3)];
+    % frameRange goes from frame after a jump and is as long as (total # frames
+    % acquired on the camera-the frame within that window where averaging starts)
+    frameRange = [transitionFrames(i), transitionFrames(i)+(framesToAverage-frameStart)];
     
     temp_transmitted = PSFfits_transmitted(PSFfits_transmitted(:,1)>=frameRange(1) ...
         & PSFfits_transmitted(:,1)<=frameRange(2),:);
@@ -386,12 +395,14 @@ for i = 1:length(transitionFrames)
             if length(x) == 0
                 continue
             else
-                measurements = temp_transmitted(:,2)<=x+buffer ...
-                    & temp_transmitted(:,2)>=x-buffer ...
-                    & temp_transmitted(:,3)<=y+buffer ...
-                    & temp_transmitted(:,3)>=y-buffer;
+                measurements = (temp_transmitted(:,2)-repmat(x,size(temp_transmitted,1),1)).^2+...
+                               (temp_transmitted(:,3)-repmat(y,size(temp_transmitted,1),1)).^2 < buffer^2;                
+%                 temp_transmitted(:,2)<=x+buffer ...
+%                     & temp_transmitted(:,2)>=x-buffer ...
+%                     & temp_transmitted(:,3)<=y+buffer ...
+%                     & temp_transmitted(:,3)>=y-buffer;
                 numMeasurements(j) = sum(measurements);
-                if numMeasurements(j) > framesToAverage-3+1  % two overlapping beads, 
+                if numMeasurements(j) > framesToAverage-frameStart+1  % two overlapping beads, 
                                                              % these parameters are specific to the 
                                                              % current log file format
                     continue

@@ -35,20 +35,17 @@ function [outputFilePrefix] = ...
 % precisely localized using a double gaussian fit and corrected for drift
 % using the results from f_trackFiducials.
 
-windowBG = false;
-windowSize = 200; % currently a 'radius' 
-% maybe try only going forward (more bleached, fewer SMs forward in time)
-
+if exist('threshFile')
+    load(threshFile,'usePolyROI','medianFilter','windowSize','medianBlurSigma','dispRaw','interpVal')
+    if usePolyROI
+        load(threshFile,'FOVmask','FOVmask1');
+    end
+end
 if nhaData
     peakThreshold=peakThreshold*10000; %cancels out the call to divide in easy_dhpsf
     load(threshFile,'blankMask'); %retrieve mask for censoring data
 end
-if exist('threshFile')
-    load(threshFile,'usePolyROI')
-    if usePolyROI
-        load(threshFile,'FOVmask','FOVmask1','gaussFilt');
-    end
-end
+
 printOutputFrames = 0;
 
 if printOutputFrames == 1 % this will save all process images (correlation image, raw data, and reconstruction)
@@ -341,13 +338,18 @@ for stack = selectedFiles % = 1:length(dataFile)
     
     
     hSMFits=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
+    %totalPSFfits=[frame#, loc# w/in frame, xLocation yLocation matchingTemplateNumber matchConfidence (6),
+    %amp1 amp2 xMean1 yMean1 xMean2 yMean2 sigma1 sigma2 bkgndMean(15)
+    %totalFitError goodFit xCenter yCenter angle numPhotons
+    %interlobeDistance, amplitude ratio, sigma ratio(24)
+    %corrected X, corrected Y, corrected Z (27)]
     totalPSFfits = zeros(20000, 6+18+3);
     numPSFfits = 0;
     startTime = tic;
     logFlag = 0;
     cropWidth = ROI(3);
     cropHeight = ROI(4);
-    bkgndImg = zeros(length(ROI(2):ROI(2)+ROI(4)-1),...
+    bkgndImgTotal = zeros(length(ROI(2):ROI(2)+ROI(4)-1),...
         length(ROI(1):ROI(1)+ROI(3)-1));
     numbkgndImg = 0;
     
@@ -355,10 +357,23 @@ for stack = selectedFiles % = 1:length(dataFile)
         frames = frames';
     end
     
+    % set up median filter
+    dataWindow = nan([2*floor(windowSize/2)+1,size(bkgndImgTotal)]);
+    if medianBlurSigma~=0
+        medBlurFilt = fspecial('gaussian',100,medianBlurSigma);
+    else
+        medBlurFilt=1;
+    end
+    lastFrame = nan;
+    
+    % set up mean BG for laser spot calculation
+    meanBG = nan(length(frames),1);
+    meanSignal = nan(length(frames),1);
     for c=frames
         if isempty(frames) % if [] has been selected for this file
             break
         end
+        currIdx = find(frames==c); % current index within 'frames'
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
         if nhaData
@@ -367,65 +382,44 @@ for stack = selectedFiles % = 1:length(dataFile)
         if usePolyROI
             dataRing=data(FOVmask&~FOVmask1);
             data(~FOVmask)=median(dataRing);
-            for i = 1:10
-            dataBlur=imfilter(data,gaussFilt,'replicate');
-            data(~FOVmask)=dataBlur(~FOVmask);
-            end
-            clear dataBlur
+            % the below can smooth the data near the edge of the FOV -
+            % would be useful if using wavelet bg subtraction, e.g.
+%             for i = 1:10
+%             dataBlur=imfilter(data,gaussFilt,'replicate');
+%             data(~FOVmask)=dataBlur(~FOVmask);
+%             end
+%             clear dataBlur
         end
         % subtract the background and continue
-        if windowBG 
-            %begAvg=tic;
-            relIdx = find(frames==c); % when indexing within 'frames'
-            if relIdx == 1 % generate window de novo
-                dataWindow = zeros(size(data));
-                numWinFrames = 0;
-
-                for bgFrSum = frames(max(1,relIdx-windowSize):min(end,relIdx+windowSize)) % don't go outside 'frames'
-                    if bgFrSum == c
-                        dataToSum = data; % already generated, faster to reference
-                    else 
-                        dataToSum = double(imread([dataPath dataFile{stack}],bgFrSum,'Info',fileInfo))-darkAvg;
-                        dataToSum=dataToSum(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
-                    end
-                    dataWindow = dataWindow+dataToSum;
-                    numWinFrames=numWinFrames+1;
-                end
-                dataWindow = dataWindow./numWinFrames; 
-            else % add the difference between last avg and this avg (in order to load minimum # frames)
-                dataWindow = dataWindow*numWinFrames; % retrieve sum of frames
-                oldEnds = [max(1,relIdx-1-windowSize),min(length(frames),relIdx-1+windowSize)]; % the edges of the window
-                newEnds = [max(1,relIdx-windowSize),min(length(frames),relIdx+windowSize)];
-                % reckon new
-                if oldEnds(1)==newEnds(1) && oldEnds(2)~=newEnds(2) % i.e. if both touch the beginning but do not touch the end
-                    numWinFrames = numWinFrames+1; % still expanding frames in window
-                    addFrame=double(imread([dataPath dataFile{stack}],newEnds(2),'Info',fileInfo))-darkAvg; % add the expanding end
-                    addFrame=addFrame(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
-                    subFrame = zeros(size(data)); % don't need to subtract yet
-                elseif oldEnds(1)~=newEnds(1) && oldEnds(2)==newEnds(2) % i.e. if they have hit the end, but not the beginning
-                    numWinFrames = numWinFrames-1; % contracting after hitting end
-                    addFrame = zeros(size(data));
-                    subFrame = double(imread([dataPath dataFile{stack}],oldEnds(1),'Info',fileInfo))-darkAvg;
-                    subFrame = subFrame(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
-                else % the window is as big as or larger than the #frames
-                    addFrame = zeros(size(data));
-                    subFrame = zeros(size(data));
-                end
-                dataWindow = dataWindow+addFrame-subFrame;
-                dataWindow = dataWindow / numWinFrames;
+        if medianFilter
+            
+            if isnan(lastFrame) || currIdx==interpVal*round(currIdx/interpVal);
+                [bkgndImgMed, dataWindow] = f_medianFilter([dataPath dataFile{stack}], fileInfo, darkAvg, ROI, frames, c, windowSize, dataWindow,lastFrame);
+                lastFrame = c;
             end
-            bkgndImg_curr = f_waveletBackground(dataWindow);
-            %time=toc(begAvg);
-            %disp(num2str(time/numWinFrames));
-        elseif nhaData==true
+            
+            bkgndImg = bkgndImgMed;
+            
+            
+            if medianBlurSigma~=0
+                bkgndImg(~FOVmask)=median(reshape(bkgndImg(~FOVmask1&FOVmask),[],1));
+                bkgndImg = imfilter(bkgndImg,medBlurFilt,'replicate');
+            end
+        elseif nhaData
             % use median of all pixels as BG estimate
-            bkgndImg_curr = median(data(:)).*ones(size(data));
+            bkgndImg = median(data(:)).*ones(size(data));
         else
-            bkgndImg_curr = f_waveletBackground(data);
+            bkgndImg = f_waveletBackground(data);
         end
-        bkgndImg = bkgndImg + bkgndImg_curr;
+        
+        if usePolyROI && medianFilter % otherwise the displayed image is wrong
+            bkgndImg(~FOVmask) = data(~FOVmask);
+        end
+        
+        bkgndImgTotal = bkgndImgTotal + bkgndImg;
         numbkgndImg = numbkgndImg +1;
-        data = data - bkgndImg_curr;
+        
+        data = data - bkgndImg;
         
         dataFT = fft2(data,cropHeight,cropWidth);
         maxPeakImg = zeros(cropHeight,cropWidth);
@@ -513,7 +507,7 @@ for stack = selectedFiles % = 1:length(dataFile)
         
         %% do fitting to extract exact locations of DH-PSFs
         
-        % [amp1 amp2 xMean1 yMean1 xMean2 yMean2 sigma1 sigma2 bkgndMean
+        % [amp1 amp2 xMean1 yMean1 xMean2 yMean2 sigma1 sigma2 bkgndMean(9)
         %  totalFitError goodFit xCenter yCenter angle numPhotons interlobeDistance amplitude ratio sigma ratio]
         PSFfits = zeros(numPSFLocs, 18);
         % create reconstructed DH-PSF image from fitted data
@@ -579,7 +573,7 @@ for stack = selectedFiles % = 1:length(dataFile)
                 f_doubleGaussianVector(x,data(yIdx(:,1),xIdx(1,:)),0,xIdx,yIdx),...
                 fitParam,lowerBound,upperBound,options);
             
-            fittedBkgndMean = mean2(bkgndImg_curr(yIdx(:,1),xIdx(1,:)))*conversionFactor;
+            fittedBkgndMean = mean2(bkgndImg(yIdx(:,1),xIdx(1,:)))*conversionFactor;
             
             PSFfits(b,1:11) = [fitParam fittedBkgndMean sum(abs(residual)) exitflag];
             
@@ -696,6 +690,16 @@ for stack = selectedFiles % = 1:length(dataFile)
         numPSFfits = numPSFfits+numPSFLocs;
         
         %%  plot results of template matching and fitting
+        
+        if dispRaw
+            dataToPlot = data+bkgndImg;
+            reconstToPlot = reconstructImg + bkgndImg;
+            dataTitle = ['Frame ' num2str(c) ': raw data - darkAvg counts'];
+        else
+            dataToPlot = data;
+            reconstToPlot = reconstructImg;
+            dataTitle = ['Frame ' num2str(c) ': raw data - darkAvg & bkgnd'];
+        end
         set(0,'CurrentFigure',hSMFits);
         subplot('Position',[0.025 0.025 .85/3 .95]);
         imagesc(maxPeakImg,[0 3*min(peakThreshold(stack,:))]);axis image;
@@ -703,7 +707,7 @@ for stack = selectedFiles % = 1:length(dataFile)
             [num2str(numPSFLocs) ' matches found']});
         
         subplot('Position',[0.075+.85/3 0.025 .85/3 .95]);
-        imagesc(data);axis image;colormap hot;
+        imagesc(dataToPlot);axis image;colormap hot;
         hold on;
         for b=1:numPSFLocs
             %plot(PSFLocs(b,1), PSFLocs(b,2), 'o', ...
@@ -719,12 +723,12 @@ for stack = selectedFiles % = 1:length(dataFile)
             %there is an error. -AC 6/22
         end
         hold off;
-        title({['Frame ' num2str(c) ': raw data - darkAvg counts'] ...
+        title({dataTitle ...
             ['ROI [xmin ymin width height] = ' mat2str(ROI)]});
         
         subplot('Position',[0.125+2*.85/3 0.025 .85/3 .95]);
         %         imagesc(reconstructImg+bkgndMean,[min(data(:)) max(data(:))]);axis image;
-        imagesc(reconstructImg,[min(data(:)) max(data(:))]);axis image;
+        imagesc(reconstToPlot,[min(dataToPlot(:)) max(dataToPlot(:))]);axis image;
         title({'Image reconstructed from fitted matches' ...
             [num2str(sum(PSFfits(:,11)>0)) ' successful fits']});
         
@@ -733,6 +737,9 @@ for stack = selectedFiles % = 1:length(dataFile)
             set(gcf,'PaperPositionMode','auto');
             saveas(hSMFits, ['output images' filesep 'frame ' num2str(c) '.tif']);
         end
+        
+        meanSignal(currIdx) = mean(data(FOVmask));
+        meanBG(currIdx) = mean(bkgndImg(FOVmask));
     end
     elapsedTime = toc(startTime);
     totalPSFfits = totalPSFfits(1:numPSFfits,:);
@@ -754,7 +761,7 @@ for stack = selectedFiles % = 1:length(dataFile)
         % This takes the average bkgndImg found using f_waveletBackground
         % and tries to extract a Gaussian laser profile from it, assuming the
         % background intensity is uniformly proportional to laser intensity
-        bkgndImg_avg = bkgndImg/numbkgndImg;
+        bkgndImg_avg = bkgndImgTotal/numbkgndImg;
         
         [laser_x_nm, laser_y_nm ,sigma_x_nm, sigma_y_nm, theta, peakIntensity, waist]...
             = f_findGaussianLaserProfile...
