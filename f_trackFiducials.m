@@ -34,6 +34,17 @@ function [outputFilePrefix] = f_trackFiducials(dataFile,dataPath,calFile,calBead
 
 % sigmaBounds = [1.0 3.0] * 125.78 / nmPerPixel;
 
+dlg_title = 'background subtraction type';
+prompt = { 'Use wavelet subtraction?' }; 
+def = { '0' };
+num_lines = 1;
+inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+
+% whether to use wavelet background subtraction, or subtract mean of image
+% Off by default to minimize any possible change to shape of
+% templates.
+useWaveSub = logical(str2num(inputdialog{1}));
+
 conversionFactor = conversionGain/EMGain;
 % lobeDistBounds(2) = 10;
 
@@ -63,7 +74,7 @@ for stack = 1:length(dataFile)
     
     if stack == 1
         
-        load(calFile) % is this needed at this point??
+        %load(calFile) % is this needed at this point?
         
         if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
             
@@ -318,7 +329,14 @@ for stack = 1:length(dataFile)
         data = data(ROI(2):ROI(2)+ROI(4)-1, ...
             ROI(1):ROI(1)+ROI(3)-1);        % crop image to ROI
         
-        bkgndImg = f_waveletBackground(data);
+        % subtract the background and continue
+        if useWaveSub || ~exist('useWaveSub')
+            bkgndImg = f_waveletBackground(data);
+        else
+        % subtract median to get rough idea of #photons of fiducial
+            bkgndImg = repmat(median(data(:)),size(data));
+        end
+            
         data = data - bkgndImg;
         
         %         %% compute background image for each frame
