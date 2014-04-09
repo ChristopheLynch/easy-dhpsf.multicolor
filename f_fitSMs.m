@@ -376,7 +376,7 @@ for stack = selectedFiles % = 1:length(dataFile)
         currIdx = find(frames==c); % current index within 'frames'
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
-        if nhaData
+        if nhaData && exist('blankMask') % obsolete but included in case reintroduced
             data=data.*(~blankMask);
         end
         if usePolyROI
