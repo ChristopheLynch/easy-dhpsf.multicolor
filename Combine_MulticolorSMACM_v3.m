@@ -51,6 +51,7 @@ if ~registrationComplete
     fileNum = 1;
     LocFiles = {};
     dataSets = [];
+    useFids = 1; % use fids unless one or both files does not have a fiducial
     
     while ~isequal(LocFile,0)
         
@@ -60,9 +61,7 @@ if ~registrationComplete
         
         %    Assemble the structure for this dataset
         dataSet.frameNum = frameNum;
-        dataSet.xLoc = xLocRaw;
-        dataSet.yLoc = yLocRaw;
-        dataSet.zLoc = zLocRaw;
+        
         dataSet.sigmaX = sigmaX;
         dataSet.sigmaY = sigmaY;
         dataSet.sigmaZ = sigmaZ;
@@ -72,6 +71,19 @@ if ~registrationComplete
         dataSet.fidTrackY = fidTrackY;
         dataSet.fidTrackZ = fidTrackZ;
         dataSet.wlShift = [wlShiftX, wlShiftY];
+        
+        if isempty(fidTrackX)
+            dataSet.fidCorrected = 0;
+            useFids = 0;
+            dataSet.xLoc = xLoc;
+            dataSet.yLoc = yLoc;
+            dataSet.zLoc = zLoc;
+        else
+            dataSet.fidCorrected = 1;
+            dataSet.xLoc = xLocRaw;
+            dataSet.yLoc = yLocRaw;
+            dataSet.zLoc = zLocRaw;
+        end
         
         dlg_title = 'Transform dataset';
         prompt = {'Do you want to transform this dataset?'};
@@ -83,36 +95,45 @@ if ~registrationComplete
                 
                 % transform SM data
                 dataSet.transformedDataset = true;
-                transformedData = transformData([xLocRaw, yLocRaw, zLocRaw],tform);
+                
+                if dataSet.fidCorrected
+                    transformedData = transformData([xLocRaw, yLocRaw, zLocRaw],tform);
+                else
+                    transformedData = transformData([xLoc, yLoc, zLoc],tform);
+                end
                 dataSet.xLoc_transformed = transformedData(:,1);
                 dataSet.yLoc_transformed = transformedData(:,2);
                 dataSet.zLoc_transformed = transformedData(:,3);
                 
-                % transform fiducial data
-                % ToDo:  Code in the possibility for multiple fiducial in the
-                % field-of-view.  Currently the code only handles a single one.
-                dataSet.fidTrackX_transformed = NaN(length(fidTrackX),1);
-                dataSet.fidTrackY_transformed = NaN(length(fidTrackX),1);
-                dataSet.fidTrackZ_transformed = NaN(length(fidTrackX),1);
-                transformedData = transformData([fidTrackX(~isnan(fidTrackX)),...
-                    fidTrackY(~isnan(fidTrackY)),...
-                    fidTrackZ(~isnan(fidTrackZ))],tform);
-                dataSet.fidTrackX_transformed(~isnan(fidTrackX)) = transformedData(:,1);
-                dataSet.fidTrackY_transformed(~isnan(fidTrackY)) = transformedData(:,2);
-                dataSet.fidTrackZ_transformed(~isnan(fidTrackZ)) = transformedData(:,3);
                 
-                dataSet.fidTrack_interpolated_FRE = NaN(length(fidTrackX),4);
-                dataSet.fidTrack_interpolated_TRE = NaN(length(fidTrackX),4);
-                dataSet.fidTrack_interpolated_FRE(~isnan(fidTrackX),:) = [...
-                    F_FRE(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
-                    F_FRE_X(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
-                    F_FRE_Y(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
-                    F_FRE_Z(transformedData(:,1),transformedData(:,2),transformedData(:,3)) ];
-                dataSet.fidTrack_interpolated_TRE(~isnan(fidTrackX),:) = [...
-                    F_TRE(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
-                    F_TRE_X(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
-                    F_TRE_Y(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
-                    F_TRE_Z(transformedData(:,1),transformedData(:,2),transformedData(:,3)) ];
+                if dataSet.fidCorrected
+                    % transform fiducial data
+                    % ToDo:  Code in the possibility for multiple fiducial in the
+                    % field-of-view.  Currently the code only handles a single one.
+                    dataSet.fidTrackX_transformed = NaN(length(fidTrackX),1);
+                    dataSet.fidTrackY_transformed = NaN(length(fidTrackX),1);
+                    dataSet.fidTrackZ_transformed = NaN(length(fidTrackX),1);
+                    transformedData = transformData([fidTrackX(~isnan(fidTrackX)),...
+                        fidTrackY(~isnan(fidTrackY)),...
+                        fidTrackZ(~isnan(fidTrackZ))],tform);
+                    dataSet.fidTrackX_transformed(~isnan(fidTrackX)) = transformedData(:,1);
+                    dataSet.fidTrackY_transformed(~isnan(fidTrackY)) = transformedData(:,2);
+                    dataSet.fidTrackZ_transformed(~isnan(fidTrackZ)) = transformedData(:,3);
+
+                    dataSet.fidTrack_interpolated_FRE = NaN(length(fidTrackX),4);
+                    dataSet.fidTrack_interpolated_TRE = NaN(length(fidTrackX),4);
+                    dataSet.fidTrack_interpolated_FRE(~isnan(fidTrackX),:) = [...
+                        F_FRE(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                        F_FRE_X(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                        F_FRE_Y(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                        F_FRE_Z(transformedData(:,1),transformedData(:,2),transformedData(:,3)) ];
+                    dataSet.fidTrack_interpolated_TRE(~isnan(fidTrackX),:) = [...
+                        F_TRE(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                        F_TRE_X(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                        F_TRE_Y(transformedData(:,1),transformedData(:,2),transformedData(:,3)),...
+                        F_TRE_Z(transformedData(:,1),transformedData(:,2),transformedData(:,3)) ];
+                        dataSet.fidCorrected = 1;
+                end
                 
             case 'No'
                 
@@ -168,6 +189,10 @@ if ~registrationComplete
     clear xLoc yLoc zLoc zRange fidTrackX fidTrackY fidTrackZ
     % save('workspace.mat');
     
+    color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
+    
+    if useFids
+    
     %% Identify frames based on the sequence log
     % load data and register sequence log to data frames
     
@@ -207,7 +232,7 @@ if ~registrationComplete
         end
     end
     
-    color = {'Green', 'Red', 'Blue', 'Cyan', 'Yellow' };
+    
     figure_h_b = figure('Position',[(scrsz(3)-1280)/2+1 (scrsz(4)-720)/2 1280 720],'color','w','renderer','painters');
     set(gcf,'DefaultTextFontName','Arial','DefaultAxesFontName','Arial',...
         'DefaultTextFontSize',12,'DefaultAxesFontSize',12,...
@@ -529,13 +554,14 @@ if ~registrationComplete
             dataSets(i).zLoc_driftCorr = dataSets(i).zLoc - avgDevZ(dataSets(i).frameNum);
         end
     end
-    
-        %% Apply index mismatch corrections
-    % Todo: This is empirical. A better model accouting for index mismatch
-    % needs to developed here.
-    for i = 1:length(dataSets)
-        dataSets(i).zLoc_driftCorr_indexCorr = dataSets(i).zLoc_driftCorr * nSample/nOil;
-    end 
+
+    % moved lower: this was originally here
+%         %% Apply index mismatch corrections
+%     % Todo: This is empirical. A better model accouting for index mismatch
+%     % needs to developed here.
+%     for i = 1:length(dataSets)
+%         dataSets(i).zLoc_driftCorr_indexCorr = dataSets(i).zLoc_driftCorr * nSample/nOil;
+%     end 
 
     %% Show the difference between the registered fiducial tracks
     if ~exist('tformChan') % this currently doesn't work unless transform second dataset
@@ -712,7 +738,38 @@ if ~registrationComplete
 %     saveas(figure_h_d,[savePath 'XYZFidMisregistration_denoised.png']);
 %     close(figure_h_d)
     
-
+elseif ~useFids
+        disp('You did not use fiducials!')
+        % use the 'driftCorr' name to make the code easier, but not that
+        % these are NOT fiducial drift corrected - may want to change this
+        % to be easier to parse (e.g. use different variable name and an if
+        % statement to define which variable name to use for the following)
+        for i = 1:length(dataSets);
+            
+            if dataSets(i).transformedDataset
+                transformedDataSet = i;
+                dataSets(i).xLoc_driftCorr = dataSets(i).xLoc_transformed;
+                dataSets(i).yLoc_driftCorr = dataSets(i).yLoc_transformed;
+                dataSets(i).zLoc_driftCorr = dataSets(i).zLoc_transformed;
+            else
+                dataSets(i).xLoc_driftCorr = dataSets(i).xLoc;
+                dataSets(i).yLoc_driftCorr = dataSets(i).yLoc;
+                dataSets(i).zLoc_driftCorr = dataSets(i).zLoc;
+                untransformedDataSet = i;
+            end
+        end
+        
+        
+        [saveFile, savePath] = uiputfile({'*.*'},'Enter a directory title for this ROI. Otherwise, click cancel.');
+        savePath = [savePath saveFile '/'];
+        mkdir(savePath);
+    end
+        %% Apply index mismatch corrections
+    % Todo: This is empirical. A better model accouting for index mismatch
+    % needs to developed here.
+    for i = 1:length(dataSets)
+        dataSets(i).zLoc_driftCorr_indexCorr = dataSets(i).zLoc_driftCorr * nSample/nOil;
+    end 
     
     %% Clean up
     tform.FRE = FRE;
@@ -851,14 +908,23 @@ while anotherpass == true
         end
     end
     
+    figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
+    
     if whiteLightFile ~= 0
         xRange = xWL(1,:);
         yRange = yWL(:,1);
         % pick region that contains background
-        figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         imagesc(xRange,yRange,whiteLight);axis image;colormap gray;
-        hold on;
+    else
+        xRange = [min(vertcat(dataSets.xLoc_driftCorr)) max(vertcat(dataSets.xLoc_driftCorr))];
+        yRange = [min(vertcat(dataSets.yLoc_driftCorr)) max(vertcat(dataSets.yLoc_driftCorr))];
+        [xBl, yBl] = meshgrid(round(xRange(1)):100:round(xRange(2)),...
+                              round(yRange(1)):100:round(yRange(2)));
+        imagesc(yBl(:,1),xBl(1,:),zeros(size(xBl)),[-1 0]); axis image; colormap gray;
     end
+    
+    
+    hold on;
     
     for i = 1:length(dataSets)
         
@@ -888,8 +954,10 @@ while anotherpass == true
         xslice = []; yslice = []; zslice = -600;
         h=slice(x,y,z,repmat(whiteLight,[1 1 2]),xslice,yslice,zslice,'nearest');
         set(h,'EdgeColor','none','FaceAlpha',0.75);
-        colormap gray; hold on;
+        colormap gray; 
     end
+    
+    hold on; grid on;
     
     for i = 1:length(dataSets)
         
