@@ -43,7 +43,7 @@ if exist('threshFile')
 end
 if nhaData
     peakThreshold=peakThreshold*10000; %cancels out the call to divide in easy_dhpsf
-    load(threshFile,'blankMask'); %retrieve mask for censoring data
+    load(threshFile,'blankMask'); %retrieve mask for censoring data    
 end
 
 printOutputFrames = 0;
@@ -377,7 +377,11 @@ for stack = selectedFiles % = 1:length(dataFile)
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
         if nhaData && exist('blankMask') % obsolete but included in case reintroduced
-            data=data.*(~blankMask);
+            if exist('blankMask', 'var')
+                data=data.*(~blankMask);
+            else
+                data=data.*(FOVmask1);
+            end
         end
         if usePolyROI
             dataRing=data(FOVmask&~FOVmask1);

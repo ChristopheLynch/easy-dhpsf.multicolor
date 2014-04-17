@@ -32,9 +32,10 @@
 % directly
 function f_processFits(catPSFfits,numFrames,fitFilePrefix, fidTrackX, fidTrackY, fidTrackZ, nmPerPixel)
 useTimeColors = 0;
+plotAsTracks = 0;
 numPhotonRange = [300 10000];
-xyPrecRange = [0 100];
-zPrecRange = [0 150];
+xyPrecRange = [0 150];
+zPrecRange = [0 200];
 numFramesAll = sum(numFrames);
 load([fitFilePrefix{1} 'molecule fits.mat']);
 
@@ -215,6 +216,7 @@ while anotherpass == true
         'Z range upper bound(in nm)',...
         'First frame',...
         'Last frame'...
+        'Plot as Tracks'...
         };
     def = { ...
         num2str(scatterSize), ...
@@ -225,6 +227,7 @@ while anotherpass == true
         num2str(zRange(2)), ...
         num2str(frameRange(1)), ...
         num2str(frameRange(2)), ...
+        num2str(plotAsTracks), ...
         };
     num_lines = 1;
     inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
@@ -235,6 +238,7 @@ while anotherpass == true
     wlShiftY = str2double(inputdialog{4});
     zRange = [str2double(inputdialog{5}) str2double(inputdialog{6})];
     frameRange = [str2double(inputdialog{7}) str2double(inputdialog{8})];
+    plotAsTracks = str2double(inputdialog{9});
       
     dlg_title = 'Please Input Parameters';
     prompt = {  ...
@@ -293,7 +297,12 @@ while anotherpass == true
         % resize white light to the size of the ROI of the single molecule fits
         whiteLight = whiteLight(ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1,ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1);
         % rescale white light image to vary from 0 to 1
-        whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
+        %         whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
+        border = 40;
+        whiteLight = (whiteLight-min(whiteLight(:)))/...
+            (max(max(whiteLight(border:size(whiteLight,1)-border,...
+            border:size(whiteLight,2)-border)))-...
+            min(whiteLight(:)));
         [xWL, yWL] = meshgrid((ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1) * nmPerPixel + wlShiftX, ...
             (ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1) * nmPerPixel + wlShiftY);
         %         [xWL yWL] = meshgrid((1:(whiteLightInfo(1).Width)) * nmPerPixel + wlShiftX, ...
@@ -448,7 +457,7 @@ while anotherpass == true
         xRange = xWL(1,:);
         yRange = yWL(:,1);
         % pick region that contains background
-        imagesc(xRange,yRange,whiteLight);axis image;colormap gray;hold on;
+        imagesc(xRange,yRange,whiteLight, [0 1]);axis image;colormap gray;hold on;
     end
     
     % plot is faster than scatter
@@ -605,12 +614,26 @@ while anotherpass == true
         colormap gray; hold on;
     end
     
-    if useTimeColors == 0
+    if plotAsTracks == 1
+        markerColors = jet(frameNum(length(frameNum))-frameNum(1)+1);
+        
+        for a = 1:length(frameNum)-1
+        
+%             plot3(xLoc,yLoc,zLoc_IndexCorrected,'-',...
+%                 'Color',[1 1 0]);
+            plot3(xLoc(a:a+1),yLoc(a:a+1),zLoc_IndexCorrected(a:a+1),'LineWidth',scatterSize/12,...
+                'Color',markerColors(frameNum(a)-frameNum(1)+1,:));
+            
+%             scatter3(xLoc(a),yLoc(a),zLoc_IndexCorrected(a),scatterSize,'filled',...
+%                 'MarkerFaceColor', markerColors(frameNum(a)-frameNum(1)+1,:),...
+%                 'MarkerEdgeColor', markerColors(frameNum(a)-frameNum(1)+1,:));
+        end
+    elseif useTimeColors == 0
         % plot is faster than scatter
         plot3(xLoc,yLoc,zLoc_IndexCorrected,'.','MarkerSize',scatterSize/3,...
             'Color',[1 1 0]);
     %     scatter3(xLoc,yLoc,zLoc,scatterSize,[1 1 0],'filled');
-    else
+    elseif useTimeColors == 1
         %         scatter3(xLoc(a),yLoc(a),zLoc(a),scatterSize,frameNum(1):frameNum(length(frameNum)),'filled')
         markerColors = jet(frameNum(length(frameNum))-frameNum(1)+1);
         %     for a = 1:length(frameNum)
