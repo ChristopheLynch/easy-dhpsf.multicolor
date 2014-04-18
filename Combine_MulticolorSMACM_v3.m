@@ -202,6 +202,28 @@ if ~registrationComplete
     end
 
     sifLogData =  importdata([logPath logFile]);
+    sifLogData = sifLogData(1:max(vertcat(dataSets(:).frameNum)),:);
+    
+    for k = 1:size(sifLogData,1) % kludge fix - should not be needed!!
+        if sifLogData(k,3)==1 && sifLogData(k,2)==1
+            sifLogData(k,1:3) = [0 1 1];
+        elseif sifLogData(k,3)==1
+            sifLogData(k,1:3) = [0 0 1];
+        elseif sifLogData(k,2)==1
+            sifLogData(k,1:3) = [0 1 0];
+        else
+            sifLogData(k,1:3) = [nan nan nan];
+        end
+    end
+    sifLogData(:,4) = [];
+    for k = 1:size(sifLogData,1)
+        if isnan(sifLogData(k,1)) && k < size(sifLogData,1)
+            sifLogData(k,:) = sifLogData(k+1,:);
+        else
+            sifLogData(k,1:3) = [0 0 0];
+        end
+    end
+    
     frames_green = find(sifLogData(:,2) == 1);
     frames_red = find(sifLogData(:,3) == 1);
     selectedFrames = unique(sort([frames_green; frames_red]));
