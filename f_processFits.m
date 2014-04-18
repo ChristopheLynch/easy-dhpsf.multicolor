@@ -36,9 +36,11 @@ plotAsTracks = 0;
 numPhotonRange = [300 10000];
 xyPrecRange = [0 150];
 zPrecRange = [0 200];
+
 numFramesAll = sum(numFrames);
 load([fitFilePrefix{1} 'molecule fits.mat']);
 
+threshVals = peakThreshold(1,:);
 
 % Parameters
 
@@ -150,6 +152,8 @@ while anotherpass == true
         lobeDistCol = 22;
         ampRatioCol = 23;
         sigmaRatioCol = 24;
+        templateNumCol = 5;
+        templateStrCol = 6;
         
         initGoodFits = catPSFfits(:,goodFitFlagCol) > 0;
         
@@ -256,6 +260,7 @@ while anotherpass == true
         'xyPrec upper bound (nm)',...
         'zPrec lower bound (nm)',...
         'zPrec upper bound (nm)',...
+        'Minimum template match values',...
         };
     def = { ...
 %         num2str(sigmaBounds(1)), ...
@@ -272,6 +277,7 @@ while anotherpass == true
         num2str(xyPrecRange(2)),...
         num2str(zPrecRange(1)),...
         num2str(zPrecRange(2)),...
+        ['[' num2str(threshVals) ']'],...
         };
     num_lines = 1;
     inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
@@ -284,7 +290,7 @@ while anotherpass == true
     numPhotonRange = [str2double(inputdialog{7}) str2double(inputdialog{8})];
     xyPrecRange = [str2double(inputdialog{9}) str2double(inputdialog{10})];
     zPrecRange = [str2double(inputdialog{11}) str2double(inputdialog{12})];
-    
+    threshVals = str2num(inputdialog{13});
     %% Plot the white light image if specified
     if whiteLightFile ~= 0
         whiteLightInfo = imfinfo([whiteLightPath whiteLightFile]);
@@ -357,27 +363,37 @@ while anotherpass == true
             
             continue
             
+        %gaussian sigma ratio filter
         elseif catPSFfits(i,sigmaRatioCol) > sigmaRatioLimit;
             
             catPSFfits(i,goodFitFlagCol) = -1004;
-            
+        
+        % lobe distance filter
         elseif catPSFfits(i,lobeDistCol) < lobeDistBounds(1) || catPSFfits(i,lobeDistCol) > lobeDistBounds(2)
             
             catPSFfits(i,goodFitFlagCol) = -1005;
-            
+       
+        % amplitude ratio filter
         elseif catPSFfits(i,ampRatioCol) > ampRatioLimit;
             
             catPSFfits(i,goodFitFlagCol) = -1006;
-            
+        
+        % weighted error filter
         elseif catPSFfits(i,fitErrorCol)*conversionFactor/catPSFfits(i,numPhotonCol) > fitErrorRange(2)  || ...
                 catPSFfits(i,fitErrorCol)*conversionFactor/catPSFfits(i,numPhotonCol) < fitErrorRange(1)
             
             catPSFfits(i,goodFitFlagCol) = -1007;
-            
+        
+        % localization precision filter     
         elseif sigmaX < xyPrecRange(1) || sigmaX > xyPrecRange(2) ||...
                sigmaZ < zPrecRange(1) || sigmaZ > zPrecRange(2)
             
             catPSFfits(i,goodFitFlagCol) = -1008;
+        
+        % template match strength filter
+        elseif catPSFfits(i,templateStrCol) < threshVals(catPSFfits(i,templateNumCol))
+            catPSFfits(i,goodFitFlagCol) = -1009;
+            
         else
             catPSFfits(i,goodFitFlagCol) = 3;
         end
