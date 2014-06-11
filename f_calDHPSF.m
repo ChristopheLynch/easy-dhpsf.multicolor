@@ -638,7 +638,8 @@ for n = 1:numFiles
     
     % if calibration movie only contains one backward scan,
     % then replicate it as if it were moving forward
-    if sum(goodFit_forward) < sum(goodFit_backward)-1
+    % Assume length of scan > ~20 frames
+    if sum(goodFit_forward) < sum(goodFit_backward)-10 || (sum(goodFit_forward) < 10 && goodFit_backward > 15)
         gfTemp = goodFit_forward;
         goodFit_forward = goodFit_backward;
         goodFit_backward = gfTemp;
