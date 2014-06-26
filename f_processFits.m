@@ -461,6 +461,10 @@ while anotherpass == true
     end
     
     numPhotons = catPSFfits(goodFits,21);
+    lobeDist = catPSFfits(goodFits,22);
+    ampRatio = catPSFfits(goodFits,23);
+    sigmaRatio = catPSFfits(goodFits,24);
+    
 %     meanBkgnd = totalPSFfits(goodFits,15)*conversionFactor;
     meanBkgnd = catPSFfits(goodFits,15);  % output from template match is already in units of photons.
     frameNum = catPSFfits(goodFits,1);
@@ -525,6 +529,10 @@ while anotherpass == true
     numPhotons = numPhotons(validPoints);
     meanBkgnd = meanBkgnd(validPoints);
     frameNum = frameNum(validPoints);
+    lobeDist = lobeDist(validPoints);
+    ampRatio = ampRatio(validPoints);
+    sigmaRatio = sigmaRatio(validPoints);
+    
     PSFfits_bad = PSFfits_bad(invalidPoints,:);
     hRejections = figure;
     subplot(2,2,1:2)
@@ -741,7 +749,7 @@ mkdir(savePath);
 if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','zLoc_IndexCorrected','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
-        'wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ', 'nmPerPixel');
+        'lobeDist','ampRatio','sigmaRatio','wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ', 'nmPerPixel');
     if exist('xLocRaw');
         save([savePath 'Output'],'xLocRaw','yLocRaw','zLocRaw','zLoc_IndexCorrectedRaw','-append');
     end
