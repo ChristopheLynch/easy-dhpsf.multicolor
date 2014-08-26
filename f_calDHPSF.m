@@ -36,10 +36,11 @@ function [outputFilePrefix, numBeads] = ...
 
 % Instrument Specific Parameters
 
+
 dlg_title = 'Set EM Gain, background subtraction type';
-prompt = { 'EM Gain (1 if no gain):','Use wavelet subtraction?' }; 
-def = { '300','0' };
-blurSize = 0.5*160/nmPerPixel;
+prompt = { 'EM Gain (1 if no gain):','Use wavelet subtraction?','Many NHA holes?' }; 
+def = { '300','0','0' };
+
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 
@@ -53,10 +54,11 @@ end
 % Off by default to minimize any possible change to shape of
 % templates.
 useWaveSub = logical(str2num(inputdialog{2}));
-
+fillNHA = logical(str2num(inputdialog{3}));
 conversionFactor = conversionGain/EMGain;
 ampRatioLimit = 0.5;
 sigmaRatioLimit = 0.4;
+blurSize = 0.5*160/nmPerPixel;
 
 % hard codes batch processing to be OFF
 batchProcess = 0;
@@ -177,6 +179,9 @@ hLocs=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w
 imagesc(dataAvg(ROI(2):ROI(2)+ROI(4)-1, ...
     ROI(1):ROI(1)+ROI(3)-1));axis image;colorbar;colormap hot; 
 title('Use LMB to select fiducials. Hit enter to stop or use RMB to select the final fiducial.');
+if fillNHA
+    title('Select four fiducials that form a large box. Then select fiducials to outline the edge of your "FOV".');
+end
 hold on;
 % User will click on beads in image and then text will be imposed on the
 % image corresponding to the bead number.
@@ -196,6 +201,16 @@ while but == 1
 end
 hold off;
 
+if fillNHA
+    moleLocs = f_fill_NHA(moleLocs,nmPerPixel,2500);
+    close(hLocs)
+    hLocs=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
+        imagesc(dataAvg(ROI(2):ROI(2)+ROI(4)-1, ...
+        ROI(1):ROI(1)+ROI(3)-1));axis image;colorbar;colormap hot; 
+    for n = 1:length(moleLocs)
+        text(moleLocs(n,1),moleLocs(n,2),num2str(n),'color','white','fontsize',13,'fontweight','bold');
+    end
+end
 % moleLocs = round(ginput);
 numBeads = size(moleLocs,1);
 absLocs = zeros(numBeads,2); % actual positions in nm

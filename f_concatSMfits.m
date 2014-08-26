@@ -26,11 +26,26 @@
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = ...
-    f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix,logFile,logPath,channel)
+    f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix,logFile,logPath,channel,calFile)
 %clear all;
 % close all;
 numSyncFrames = 25;
 useDenoising = 1;
+
+%Construct a questdlg with three options
+                dlg_title = 'Use local cals?';
+                prompt = { 'Do you want to try to use spatially dependent calibrations?' };
+                def =       { 'No'  };
+                questiondialog = questdlg(prompt,dlg_title, def);
+                % Handle response
+                switch questiondialog
+                    case 'Yes'
+                        spatialCorr=true;
+                    case 'No'
+                        spatialCorr=false;
+                    case 'Cancel'
+                        error('User cancelled the program');
+                end
 
 % Can use sif logs to filter which frames are included for fiducial correction.
 % If logPath set to 0, all frames are used (every frame with a visible fiducial,
@@ -67,6 +82,11 @@ if useFidCorrections
     PSFfits = tempPSFfits;
     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
+    
+    if spatialCorr
+        PSFfits = makeLocalCals(PSFfits,calFile,'FID');
+    end
+    
     
     fidTrackX = NaN(size(PSFfits,1),numMoles);
     fidTrackY = NaN(size(PSFfits,1),numMoles);
@@ -218,6 +238,11 @@ if exist('tempAvgDevX','var')
         end
     end
     totalPSFfits = tempPSFfits;
+    
+    if spatialCorr
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM');
+    end
+    
     %     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
     
@@ -287,6 +312,11 @@ else
     numFrames = numFramesInFiles;
     % includes NaNs for fiducial-corrected position fields
     totalPSFfits = [tempPSFfits nan(size(tempPSFfits,1),3)];
+    
+    if spatialCorr
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM');
+    end
+    
     %     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
     
@@ -307,4 +337,53 @@ else
     %         'concatenation info');
     
 end
+
+end % end main function
+
+function [PSFfits] = makeLocalCals(PSFfits,calFile,type)
+    calFile = 'C:\Userfiles\diezmann\Data Analysis + Preliminary Logs\20140620_Local_Cal_Tests\calibration_r.mat';
+    load(calFile,'absLocs','goodFit_f','meanAngles','meanX','meanY','z');
+    numCals = length(absLocs);
+    
+    if strcmp(type,'SMACM')
+        xCol = 18;
+        yCol = 19;
+        angCol = 20;
+        xOut = 25;
+        yOut = 26;
+        zOut = 27;
+        goodFitCol = 13;
+    elseif strcmp(type,'FID')
+        xCol = 14;
+        yCol = 15;
+        angCol = 16;
+        xOut = 21;
+        yOut = 22;
+        zOut = 23;
+        goodFitCol = 13;
+    end
+    % length(PSFfits) x numCals... is this too big?
+    calDists = sqrt(...
+                   (repmat(PSFfits(:,xCol),1,numCals)-repmat(absLocs(:,1)',length(PSFfits),1)).^2 +...
+                   (repmat(PSFfits(:,yCol),1,numCals)-repmat(absLocs(:,2)',length(PSFfits),1)).^2);
+    [~,calNN] = min(calDists,[],2);
+    
+    goodFits = PSFfits(:,goodFitCol)>0;
+    
+    %goodFit_forward = logical(squeeze(goodFit_f(1,calBeadIdx,:)));
+    
+    % for fids: this easily tests whether fid drifts between cals
+    % figure; hist(calNN(goodFits,:),1:numCals)
+    
+    for i = 1:numCals % loop over each cal and redo points near that cal
+        goodFit_forward = logical(squeeze(goodFit_f(1,i,:)));
+        PSFfits(calNN==i,xOut) = PSFfits(calNN==i,xCol) ...
+            - interp1(squeeze(meanAngles(1,i,goodFit_forward)),...
+            squeeze(meanX(1,i,goodFit_forward)),PSFfits(calNN==i,angCol),'spline');
+        PSFfits(calNN==i,yOut) = PSFfits(calNN==i,yCol) ...
+            - interp1(squeeze(meanAngles(1,i,goodFit_forward)),...
+            squeeze(meanY(1,i,goodFit_forward)),PSFfits(calNN==i,angCol),'spline');
+        PSFfits(calNN==i,zOut) = interp1(squeeze(meanAngles(1,i,goodFit_forward)),...
+            squeeze(z(1,i,goodFit_forward)),PSFfits(calNN==i,angCol),'spline');
+    end
 end

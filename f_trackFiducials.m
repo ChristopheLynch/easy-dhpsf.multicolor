@@ -308,6 +308,9 @@ for stack = 1:length(dataFile)
         %         end
         frames_green = intersect(find(sifLogData(:,2) == 1),frames);
         frames_red = intersect(find(sifLogData(:,3) == 1),frames);
+        if size(frames_green,2)==1 || size(frames_red,2)==1
+            frames_green=frames_green';frames_red=frames_red';
+        end
         selectedFrames = unique(sort([frames_green, frames_red]));
     else
         selectedFrames=frames; % **temp** workaround from rev 43!
