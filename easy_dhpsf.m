@@ -713,13 +713,13 @@ set(hfig,'Visible','on');
         updateGUI;
     end
     function buttonOutScatter_Callback(~,~) 
-        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
+        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel,[s.calFilePrefix 'calibration.mat']);
         f_scatter3(totalPSFfits,s.useFids);
         
         updateGUI;
     end
     function buttonOutHist_Callback(~,~) 
-        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
+        totalPSFfits = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel,[s.calFilePrefix 'calibration.mat']);
         f_hist2(totalPSFfits,s.useFids);
         
         updateGUI;
@@ -731,7 +731,7 @@ set(hfig,'Visible','on');
         % transformed, and finally the transformed localizations and tracks
         % are subtracted to perform fiducial correction. You must still check
         % the 'use fiducials' box (as of rev 48).
-        [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel);
+        [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel,[s.calFilePrefix 'calibration.mat']);
 %         [matFile, matPath] = uiputfile({'*.mat';'*.*'},'Save localizations as old-style .mat file');
 %         if isequal(matFile,0)
 %             return;
