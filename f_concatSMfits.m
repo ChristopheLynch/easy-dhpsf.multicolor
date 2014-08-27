@@ -56,7 +56,7 @@ useDenoising = 1;
 % unless we can find a good way for waveletFidTracks to 'estimate' what's
 % going on in large gaps
 
-logFile=0; logPath=0; channel=[];
+logFile=0; logPath=0; %channel=[];
 
 if useFidCorrections
     %% load raw fiduciary data
@@ -83,7 +83,15 @@ if useFidCorrections
     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
     
-    if spatialCorr
+    [fidSaveFile, fidSavePath] = uigetfile({'*.mat';'*.*'},...
+        'If drift fiducial has different spectrum, open its easy-dhpsf save now (optional: hit cancel to skip)',...
+        'MultiSelect', 'off');
+    if ~isequal(fidSaveFile,0)
+        load([fidSavePath,fidSaveFile],channel);
+        fidCalFile = [eval([channel '.calFilePrefix']) 'calibration.mat'];
+        clear(channel);
+        PSFfits = makeLocalCals(PSFfits,fidCalFile,'FID');
+    elseif spatialCorr
         PSFfits = makeLocalCals(PSFfits,calFile,'FID');
     end
     
@@ -341,9 +349,8 @@ end
 end % end main function
 
 function [PSFfits] = makeLocalCals(PSFfits,calFile,type)
-    calFile = 'C:\Userfiles\diezmann\Data Analysis + Preliminary Logs\20140620_Local_Cal_Tests\calibration_r.mat';
     load(calFile,'absLocs','goodFit_f','meanAngles','meanX','meanY','z');
-    numCals = length(absLocs);
+    numCals = size(absLocs,1);
     
     if strcmp(type,'SMACM')
         xCol = 18;
