@@ -190,13 +190,16 @@ if useFidCorrections
         
         % compute deviation with respect to bead location averaged over last
         % numSyncFrames frames of the movie
-        devX(:,molecule) = moleculeFitParam(:,21) ...
-            - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),21));
-        devY(:,molecule) = moleculeFitParam(:,22) ...
-            - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),22));
-        devZ(:,molecule) = moleculeFitParam(:,23) ...
-            - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),23));
-        numPhotons(:,molecule) = moleculeFitParam(:,17);
+        devX(:,molecule) = moleculeFitParam(:,21) -nanmean(moleculeFitParam(goodFit,21));
+        devY(:,molecule) = moleculeFitParam(:,22) -nanmean(moleculeFitParam(goodFit,22));
+        devZ(:,molecule) = moleculeFitParam(:,23) -nanmean(moleculeFitParam(goodFit,23));
+%         devX(:,molecule) = moleculeFitParam(:,21) ...
+%             - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),21));
+%         devY(:,molecule) = moleculeFitParam(:,22) ...
+%             - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),22));
+%         devZ(:,molecule) = moleculeFitParam(:,23) ...
+%             - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),23));
+%         numPhotons(:,molecule) = moleculeFitParam(:,17);
         
         % write fiduciary data to Excel spreadsheet
         %         xlswrite([saveFilePrefix 'fiduciary deviations.xlsx'], ...
