@@ -527,9 +527,9 @@ if ~registrationComplete
     syncFrames = find(~isnan(fidTracksX_shifted_denoised(:,chosenFidTrack))); % old version (~isnan on fidTracksX) throws an error sometimes, as nans creep into the fidTracksX_... downstream arrays sometimes
     syncFrames = syncFrames(end-(numSyncFrames-1):end);
     
-    avgDevX = fidTracksX_shifted_denoised(:,chosenFidTrack) - mean(fidTracksX_shifted_denoised(syncFrames,chosenFidTrack));
-    avgDevY = fidTracksY_shifted_denoised(:,chosenFidTrack) - mean(fidTracksY_shifted_denoised(syncFrames,chosenFidTrack));
-    avgDevZ = fidTracksZ_shifted_denoised(:,chosenFidTrack) - mean(fidTracksZ_shifted_denoised(syncFrames,chosenFidTrack));
+    avgDevX = fidTracksX_shifted_denoised(:,chosenFidTrack) - nanmean(fidTracksX_shifted_denoised(:,chosenFidTrack));
+    avgDevY = fidTracksY_shifted_denoised(:,chosenFidTrack) - nanmean(fidTracksY_shifted_denoised(:,chosenFidTrack));
+    avgDevZ = fidTracksZ_shifted_denoised(:,chosenFidTrack) - nanmean(fidTracksZ_shifted_denoised(:,chosenFidTrack));
     
         % Show the drift correction to be applied
     close all; % close extraneous figures
