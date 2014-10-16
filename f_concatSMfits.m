@@ -26,7 +26,7 @@
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = ...
-    f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix,logFile,logPath,channel,calFile)
+    f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix,logFile,logPath,channel,calFile,currFidIdx)
 %clear all;
 % close all;
 numSyncFrames = 25;
@@ -58,6 +58,7 @@ useDenoising = 1;
 
 logFile=0; logPath=0; %channel=[];
 
+%% prepare fiducial data / blank out fiducial arrays
 if useFidCorrections
     %% load raw fiduciary data
     % [fidFile fidPath] = uigetfile({'*.mat';'*.*'},'Open data file #1 with raw fiduciary fits');
@@ -83,6 +84,7 @@ if useFidCorrections
     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
     
+    %% allow user to use a different spectrum for fid, or use spatially dependent calibration if selected above
     [fidSaveFile, fidSavePath] = uigetfile({'*.mat';'*.*'},...
         'If drift fiducial has different spectrum, open its easy-dhpsf save now (optional: hit cancel to skip)',...
         'MultiSelect', 'off');
@@ -139,6 +141,7 @@ else
     fidTrackZ = NaN;
 end
 
+%% concatenate data with fid corrections / just concatenate data
 if useFidCorrections
     %% compute movement of fiduciaries
     devX = zeros(numFrames,numMoles);
@@ -239,7 +242,7 @@ if exist('tempAvgDevX','var')
     
     for c = 1:fileNum
         % load data
-        load([fitFilePrefix{c} 'molecule fits.mat'],'totalPSFfits','numFrames');
+        load([fitFilePrefix{c} 'molecule fits.mat'],'totalPSFfits','numFrames','calBeadIdx');
         
         if c == 1
             tempPSFfits = totalPSFfits(:,1:27);
@@ -250,14 +253,35 @@ if exist('tempAvgDevX','var')
     end
     totalPSFfits = tempPSFfits;
     
+    %% possibly switch calibration fiducial for fits
+    if currFidIdx~=calBeadIdx && ~spatialCorr
+    dlg_title = 'Use currently selected fiducuial?';
+                prompt = { 'Do you want to switch the fiducial to the currently selected one?' };
+                def =       { 'No'  };
+                questiondialog = questdlg(prompt,dlg_title, def);
+                % Handle response
+                switch questiondialog
+                    case 'Yes'
+                        useCurrent=true;
+                    case 'No'
+                        useCurrent=false;
+                    case 'Cancel'
+                        error('User cancelled the program');
+                end
+    else
+        useCurrent = false;
+    end
+    
     if spatialCorr
-        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM');
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',0);
+    elseif useCurrent
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',currFidIdx);
     end
     
     %     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
     
-    % De-noise the fiduciary tracks
+    %% De-noise the fiduciary tracks
     avgDevX = tempAvgDevX;
     avgDevY = tempAvgDevY;
     avgDevZ = tempAvgDevZ;
@@ -298,7 +322,7 @@ else
     for fileNum=1:length(fitFilePrefix)
         %         moleFiles = [moleFiles; {[molePath moleFile]}];
         clear numFrames;
-        load([fitFilePrefix{fileNum} 'molecule fits.mat'],'totalPSFfits','numFrames');
+        load([fitFilePrefix{fileNum} 'molecule fits.mat'],'totalPSFfits','numFrames','calBeadIdx');
         
         if fileNum == 1
             tempPSFfits = totalPSFfits(:,1:27);
@@ -324,8 +348,29 @@ else
     % includes NaNs for fiducial-corrected position fields
     totalPSFfits = [tempPSFfits nan(size(tempPSFfits,1),3)];
     
+    %% possibly switch calibration fiducial for fits
+    if currFidIdx~=calBeadIdx && ~spatialCorr
+    dlg_title = 'Use currently selected fiducuial?';
+                prompt = { 'Do you want to switch the calibration fiducial to the currently selected one?' };
+                def =       { 'No'  };
+                questiondialog = questdlg(prompt,dlg_title, def);
+                % Handle response
+                switch questiondialog
+                    case 'Yes'
+                        useCurrent=true;
+                    case 'No'
+                        useCurrent=false;
+                    case 'Cancel'
+                        error('User cancelled the program');
+                end
+    else
+        useCurrent = false;
+    end
     if spatialCorr
-        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM');
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',0);
+    elseif useCurrent
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',currFidIdx);
+        disp('Note that "use current calibration" functionality has not been implemented yet for fiducials');
     end
     
     %     numFrames = sum(numFramesInFiles);
@@ -351,7 +396,7 @@ end
 
 end % end main function
 
-function [PSFfits] = makeLocalCals(PSFfits,calFile,type)
+function [PSFfits] = makeLocalCals(PSFfits,calFile,type,calBeadIdx)
     load(calFile,'absLocs','goodFit_f','meanAngles','meanX','meanY','z');
     numCals = size(absLocs,1);
     
@@ -376,10 +421,20 @@ function [PSFfits] = makeLocalCals(PSFfits,calFile,type)
     calDists = sqrt(...
                    (repmat(PSFfits(:,xCol),1,numCals)-repmat(absLocs(:,1)',length(PSFfits),1)).^2 +...
                    (repmat(PSFfits(:,yCol),1,numCals)-repmat(absLocs(:,2)',length(PSFfits),1)).^2);
+    for i = 1:numCals 
+        if sum(goodFit_f(1,i,:)) < 10 && sum(goodFit_b(1,i,:)) < 10
+            calDists(i) = nan;
+            disp(['fiducial # ' num2str(i) ' did not have enough good fits!']);
+        end
+    end
     [~,calNN] = min(calDists,[],2);
     
+        
     goodFits = PSFfits(:,goodFitCol)>0;
     
+    if calBeadIdx ~= 0
+        calNN(:)=calBeadIdx;
+    end
     %goodFit_forward = logical(squeeze(goodFit_f(1,calBeadIdx,:)));
     
     % for fids: this easily tests whether fid drifts between cals
