@@ -731,7 +731,7 @@ set(hfig,'Visible','on');
         % transformed, and finally the transformed localizations and tracks
         % are subtracted to perform fiducial correction. You must still check
         % the 'use fiducials' box (as of rev 48).
-        [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel,[s.calFilePrefix 'calibration.mat']);
+        [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = f_concatSMfits(s.fitFilePrefix,s.useFids,s.fidFilePrefix,s.smacmSifFile, s.smacmSifPath, s.channel,[s.calFilePrefix 'calibration.mat'],s.calBeadIdx);
 %         [matFile, matPath] = uiputfile({'*.mat';'*.*'},'Save localizations as old-style .mat file');
 %         if isequal(matFile,0)
 %             return;

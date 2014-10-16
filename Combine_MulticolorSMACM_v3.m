@@ -986,7 +986,7 @@ while anotherpass == true
         xLoc = dataSets(i).xLoc_driftCorr;
         yLoc = dataSets(i).yLoc_driftCorr;
         zLoc = dataSets(i).zLoc_driftCorr;
-        zLoc_indexCorr = dataSets(i).zLoc_driftCorr;
+        zLoc_indexCorr = dataSets(i).zLoc_driftCorr_indexCorr;
         frameNum = dataSets(i).frameNum;
         
         validPoints = inpolygon(xLoc,yLoc,xi, yi);

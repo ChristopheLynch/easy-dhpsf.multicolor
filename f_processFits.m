@@ -749,7 +749,7 @@ mkdir(savePath);
 if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','zLoc_IndexCorrected','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
-        'lobeDist','ampRatio','sigmaRatio','wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ', 'nmPerPixel');
+        'lobeDist','ampRatio','sigmaRatio','wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ', 'nmPerPixel','whiteLightFile');
     if exist('xLocRaw');
         save([savePath 'Output'],'xLocRaw','yLocRaw','zLocRaw','zLoc_IndexCorrectedRaw','-append');
     end

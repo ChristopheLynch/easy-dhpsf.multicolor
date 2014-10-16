@@ -444,7 +444,9 @@ for stack = selectedFiles % = 1:length(dataFile)
             %H = H / sqrt(sum(abs(H(:)).^2));
             
             peakImg = ifftshift(ifft2(dataFT.*squeeze(templateFT(b,:,:)).*H));
-            
+            if exist('FOVmask') % prevents finding matches outside FOV (due to e.g. wrapping around)
+                peakImg=peakImg.*FOVmask;
+            end
             % normalize response of peakImg by dividing by number of pixels in
             % data
             %peakImg = peakImg / (cropHeight*cropWidth);
