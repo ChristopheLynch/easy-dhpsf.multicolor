@@ -715,7 +715,7 @@ for stack = 1:length(dataFile)
                     
                     
                     % find previously good fit
-                    index = find(PSFfits(:,13)>0);
+                    index = find(PSFfits(:,13)>0&PSFfits(:,2)==b);
                     % Alternatively, could average a couple of previous
                     % frames to make distance threshold adjustable on the
                     % fly
