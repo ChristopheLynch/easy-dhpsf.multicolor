@@ -145,7 +145,7 @@ clear darkFileInfo;
 
 % Plots the avg image .tif
 dataAvg = zeros(imgHeight,imgWidth);
-for frame = 1:190
+for frame = 1:min(190,length(dataFileInfo));
     dataAvg = dataAvg + double(imread(dataFile,frame,'Info',dataFileInfo));
 end
 dataAvg = dataAvg/190 - darkAvg;
@@ -187,6 +187,7 @@ hold on;
 % image corresponding to the bead number.
 % moleLocs is a n by 2 array -- x y values for each bead
 moleLocs = [];
+erase = ones(0,2);
 n = 0;
 % Loop, collecting bead locations and drawing text to mark them
 but = 1;
@@ -194,6 +195,12 @@ while but == 1
     [xi,yi,but] = ginput(1);
     if isempty(xi)
         break
+    end
+    if but == 2;
+        erase = [erase; round([xi yi])];
+        text(xi,yi,'*','color','red','fontsize',13,'fontweight','bold');
+        but = 1;
+        continue
     end
     n = n+1;
     text(xi,yi,num2str(n),'color','white','fontsize',13,'fontweight','bold');
@@ -203,6 +210,12 @@ hold off;
 
 if fillNHA
     moleLocs = f_fill_NHA(moleLocs,nmPerPixel,2500);
+    if erase
+        for eraseIdx = 1:size(erase,1)
+            [~,toErase] = min((moleLocs(:,1)-erase(eraseIdx,1)).^2+(moleLocs(:,2)-erase(eraseIdx,2)).^2);
+            moleLocs(toErase,:) = [];
+        end
+    end
     close(hLocs)
     hLocs=figure('Position',[(scrsz(3)-1280)/2 (scrsz(4)-720)/2 1280 720],'color','w');
         imagesc(dataAvg(ROI(2):ROI(2)+ROI(4)-1, ...
@@ -658,6 +671,7 @@ for n = 1:numFiles
         gfTemp = goodFit_forward;
         goodFit_forward = goodFit_backward;
         goodFit_backward = gfTemp;
+        clear gfTemp
     end
 
 %     goodFit = logical([0 ones(1,13) zeros(1,11)]) & ...

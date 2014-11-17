@@ -175,7 +175,7 @@ for stack = selectedFiles
         
         
         templateFrames = interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),...
-            1:length(meanAngles(1,calBeadIdx,goodFit_forward)),-60:30:90,'nearest'); %90:-30:-60
+            1:length(meanAngles(1,calBeadIdx,goodFit_forward)),linspace(-60,80,6),'nearest'); %90:-30:-60
         end
         % if some angles are out of range, use the ends of the template
         % stack. first determine whether frames are increasing or
@@ -185,17 +185,17 @@ for stack = selectedFiles
         % NHAs)
         if any(isnan(templateFrames))
             if nanmean(diff(templateFrames)) >= 0
-                endFrames = {2 sum(goodFit_forward)};
+                endFrames = [2 sum(goodFit_forward)];
             elseif nanmean(diff(templateFrames)) < 0
-                endFrames = {sum(goodFit_forward) 2};
+                endFrames = [sum(goodFit_forward) 2];
             else
                 endFrames = nan;
             end
             if isnan(templateFrames(1))
-                templateFrames(1) = endFrames{1};
+                templateFrames(1) = endFrames(1);
             end
             if isnan(templateFrames(end))
-                templateFrames(end) = endFrames{2};
+                templateFrames(end) = endFrames(2);
             end
         end
 
