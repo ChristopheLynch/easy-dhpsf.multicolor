@@ -672,8 +672,9 @@ for n = 1:numFiles
     
     % if calibration movie only contains one backward scan,
     % then replicate it as if it were moving forward
-    % Assume length of scan > ~20 frames
-    if sum(goodFit_forward) < sum(goodFit_backward)-10 || (sum(goodFit_forward) < 10 && sum(goodFit_backward) > 15)
+    % Try to use forward frames unless only a few are fit, or many more
+    % backward are fit.
+    if sum(goodFit_forward) < sum(goodFit_backward)-10 || (sum(goodFit_forward) < 5 && sum(goodFit_backward) >= 5)
         gfTemp = goodFit_forward;
         goodFit_forward = goodFit_backward;
         goodFit_backward = gfTemp;
@@ -698,7 +699,8 @@ for n = 1:numFiles
     end
 
     % if there aren't enough points for a good curve, skip this fiduciary
-    if length(z0(goodFit))<2
+    if sum(goodFit_forward) < 5
+        disp(['Fiducial number ' num2str(bead) ' had only ' num2str(sum(goodFit_forward)) ' usable steps and is excluded']);
         continue;
     end
 
