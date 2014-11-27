@@ -1,11 +1,18 @@
-function [filledFids] = f_fill_NHA(fidBounds,nmPerPixel,holePitch)
+function [filledFids] = f_fill_NHA(fidBounds,nmPerPixel,holePitch,angled)
 
 % n x 2 array of vertices that bound the selection
 % nm per pixel in image space
 % pitch in NHA coordinate space in nm
+if ~exist('angled') % to make 'backwards-compatible'
+    % if angled = false, the NHA is at 0 or 90 degrees to lab coords, else the NHA is 45 degrees to lab coords (i.e. 8A back)
+    angled = true; 
+end
 
+if angled
 pixSep = holePitch * sqrt(2) / nmPerPixel; % nominal distance between holes in pix
-pixSep1 = holePitch / nmPerPixel; % distance between holes in NHA frame
+elseif ~angled
+pixSep = holePitch / nmPerPixel; % distance between holes in NHA frame
+end
 xLoc=fidBounds(:,1);
 yLoc=fidBounds(:,2);
 
@@ -83,11 +90,13 @@ fidLocs1 = [numRow(1:end)*rowStep(1) + numCol(1:end)*colStep(1);...
 % [numRow2,numCol2] = meshgrid(0:boxWidth-1,0:boxHeight-1);
 % fidLocs2 = [numRow2(1:end)*rowStep(1) + numCol2(1:end)*colStep(1);...
 %            numRow2(1:end)*rowStep(2) + numCol2(1:end)*colStep(2)]'+repmat(SW+rowStep/2+colStep/2,length(numRow2(:)),1);
-fidLocs2(:,1) = fidLocs1(:,1) + rowStep(1)/2 + colStep(1)/2;
-fidLocs2(:,2) = fidLocs1(:,2) + rowStep(2)/2 + colStep(2)/2;
-fidLocs = round([fidLocs1; fidLocs2]);
-
-
+if angled
+    fidLocs2(:,1) = fidLocs1(:,1) + rowStep(1)/2 + colStep(1)/2;
+    fidLocs2(:,2) = fidLocs1(:,2) + rowStep(2)/2 + colStep(2)/2;
+    fidLocs = round([fidLocs1; fidLocs2]);
+elseif ~angled
+    fidLocs = fidLocs1;
+end
 
 % now select points *within* the ring of points chosen by the user
 % to do so, find the set of points on the 'inside side' of each line
