@@ -38,8 +38,8 @@ function [outputFilePrefix, numBeads] = ...
 
 
 dlg_title = 'Set EM Gain, background subtraction type';
-prompt = { 'EM Gain (1 if no gain):','Use wavelet subtraction?','Many NHA holes?' }; 
-def = { '300','0','0' };
+prompt = { 'EM Gain (1 if no gain):','Use wavelet subtraction?','Many NHA holes?','If so, are they at 45 degrees?' }; 
+def = { '300','0','0','1'};
 
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
@@ -55,6 +55,7 @@ end
 % templates.
 useWaveSub = logical(str2num(inputdialog{2}));
 fillNHA = logical(str2num(inputdialog{3}));
+angled = logical(str2num(inputdialog{4}));
 conversionFactor = conversionGain/EMGain;
 ampRatioLimit = 0.5;
 sigmaRatioLimit = 0.4;
@@ -209,7 +210,7 @@ end
 hold off;
 
 if fillNHA
-    moleLocs = f_fill_NHA(moleLocs,nmPerPixel,2500);
+    moleLocs = f_fill_NHA(moleLocs,nmPerPixel,2500,angled);
     if erase
         for eraseIdx = 1:size(erase,1)
             [~,toErase] = min((moleLocs(:,1)-erase(eraseIdx,1)).^2+(moleLocs(:,2)-erase(eraseIdx,2)).^2);

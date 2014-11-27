@@ -366,7 +366,16 @@ else
     else
         useCurrent = false;
     end
+    
+    
+    
     if spatialCorr
+%         [altCalFile, altCalPath] = uigetfile({'*.mat';'*.*'},...
+%         'If you want to apply another calibration, click on the "calibration.mat" now (optional: hit cancel to skip)',...
+%         'MultiSelect', 'off');
+%         if ~isequal(altCalFile,0)
+%             calFile = [altCalPath altCalFile];
+%         end
         totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',0);
     elseif useCurrent
         totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',currFidIdx);
@@ -432,7 +441,7 @@ function [PSFfits] = makeLocalCals(PSFfits,calFile,type,calBeadIdx)
         
     goodFits = PSFfits(:,goodFitCol)>0;
     
-    if calBeadIdx ~= 0
+    if exist('calBeadIdx') && calBeadIdx ~= 0
         calNN(:)=calBeadIdx;
     end
     %goodFit_forward = logical(squeeze(goodFit_f(1,calBeadIdx,:)));
