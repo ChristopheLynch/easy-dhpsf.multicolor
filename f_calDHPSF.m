@@ -38,8 +38,8 @@ function [outputFilePrefix, numBeads] = ...
 
 
 dlg_title = 'Set EM Gain, background subtraction type';
-prompt = { 'EM Gain (1 if no gain):','Use wavelet subtraction?','Many NHA holes?','If so, are they at 45 degrees?' }; 
-def = { '300','0','0','1'};
+prompt = { 'EM Gain (1 if no gain):','Use wavelet subtraction?','Many NHA holes?','If so, are they at 45 degrees?','Is DHPSF horizontal when in focus?'}; 
+def = { '300','0','0','1','0'};
 
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
@@ -56,6 +56,7 @@ end
 useWaveSub = logical(str2num(inputdialog{2}));
 fillNHA = logical(str2num(inputdialog{3}));
 angled = logical(str2num(inputdialog{4}));
+horizontal = logical(str2num(inputdialog{5}));
 conversionFactor = conversionGain/EMGain;
 ampRatioLimit = 0.5;
 sigmaRatioLimit = 0.4;
@@ -396,14 +397,18 @@ for a=1:size(sifLogData,1)-2
         y2 = fitParam(6);
         % swap if x1>x2
 %        if (x1 > x2) 
-        if (y1 > y2) 
+        if ( ~horizontal && (y1 > y2) )  ||  (horizontal && x1 > x2)
             tx = x1; ty = y1;
             x1 = x2; y1 = y2;
             x2 = tx; y2 = ty;
             clear tx ty;
         end
         %Finds the angle
-        PSFfits(n,rowIdx,16) = atan2(-(x2-x1),y2-y1) * 180/pi;
+        if ~horizontal
+            PSFfits(n,rowIdx,16) = atan2(-(x2-x1),y2-y1) * 180/pi;
+        elseif horizontal
+            PSFfits(n,rowIdx,16) = atan2(-(y2-y1),x2-x1) * 180/pi;
+        end
 %        PSFfits(rowIdx,16) = atan2(-(y2-y1),x2-x1) * 180/pi;
         clear x1 x2 y1 y2;
 
@@ -426,8 +431,8 @@ for a=1:size(sifLogData,1)-2
         PSFfits(n,rowIdx,20) = ampRatio;
         
         % Gaussian width Ratio
-        simgaRatio = abs(fitParam(7) - fitParam(8))/sum(fitParam(7:8));
-        PSFfits(n,rowIdx,21) = simgaRatio;
+        sigmaRatio = abs(fitParam(7) - fitParam(8))/sum(fitParam(7:8));
+        PSFfits(n,rowIdx,21) = sigmaRatio;
 
         %% Now evaluate the fits
         % Conditions for fits (play with these):
@@ -452,7 +457,7 @@ for a=1:size(sifLogData,1)-2
                 || fitParam(7)>=sigmaBounds(2) || fitParam(8)>=sigmaBounds(2)
                 PSFfits(n,rowIdx,13) = -1003;   
             end
-            if simgaRatio > sigmaRatioLimit;
+            if sigmaRatio > sigmaRatioLimit;
                 PSFfits(n,rowIdx,13) = -1004;
             end
             if lobeDist < lobeDistBounds(1) || lobeDist > lobeDistBounds(2)        
