@@ -95,7 +95,7 @@ if angled
     fidLocs2(:,2) = fidLocs1(:,2) + rowStep(2)/2 + colStep(2)/2;
     fidLocs = round([fidLocs1; fidLocs2]);
 elseif ~angled
-    fidLocs = fidLocs1;
+    fidLocs = round(fidLocs1);
 end
 
 % now select points *within* the ring of points chosen by the user
