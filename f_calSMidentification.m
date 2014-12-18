@@ -806,5 +806,5 @@ for stack = selectedFiles
 
     
 end
-
+outputFilePrefix{1} = outputFilePrefix{selectedFiles(1)};
 end
