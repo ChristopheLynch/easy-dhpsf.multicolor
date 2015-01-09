@@ -291,6 +291,18 @@ for stack = 1:length(dataFile)
 
     %% Identify frames to analyze based on the sequence log
     % load data and register sequence log to data frames
+    if isequal(logFile,0)
+        [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
+            'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
+            'MultiSelect', 'on');
+        if isequal(logPath,0)
+            logFile = 'not specified';
+        end
+        if ischar(logFile)
+            logFile = cellstr(logFile);
+        end
+    end
+    
     if ~isequal(logPath,0)
         if length(logFile) == length(dataFile) % if one sif file/data file
             sifLogData =  importdata([logPath logFile{stack}]);
