@@ -95,7 +95,7 @@ scrsz = get(0,'ScreenSize');
 %     error('User cancelled the program');
 % end
 [whiteLightFile, whiteLightPath] = uigetfile({'*.tif';'*.*'},'Open image stack with white light image');
-
+whiteLightFile = [whiteLightPath whiteLightFile];
 % load([locPath locFile]);
 
 
@@ -293,11 +293,11 @@ while anotherpass == true
     threshVals = str2num(inputdialog{13});
     %% Plot the white light image if specified
     if whiteLightFile ~= 0
-        whiteLightInfo = imfinfo([whiteLightPath whiteLightFile]);
+        whiteLightInfo = imfinfo(whiteLightFile);
         whiteLight = zeros(whiteLightInfo(1).Height, whiteLightInfo(1).Width);
         % average white light images together to get better SNR
         for a = 1:length(whiteLightInfo)
-            whiteLight = whiteLight + double(imread([whiteLightPath whiteLightFile], ...
+            whiteLight = whiteLight + double(imread(whiteLightFile, ...
                 'Info', whiteLightInfo));
         end
         % resize white light to the size of the ROI of the single molecule fits
@@ -508,6 +508,11 @@ while anotherpass == true
     
     validPoints = xLoc>=ROI(1) & xLoc<=ROI(1)+ROI(3) & yLoc>ROI(2) & yLoc<=ROI(2)+ROI(4) & numPhotons>0;
     invalidPoints = xLoc_bad>=ROI(1) & xLoc_bad<=ROI(1)+ROI(3) & yLoc_bad>ROI(2) & yLoc_bad<=ROI(2)+ROI(4) ;
+    
+    if ~any(validPoints)
+        disp('You chose an area without any points');
+        continue
+    end
     
     xLocPix = xLocPix(validPoints);
     yLocPix = yLocPix(validPoints); 
@@ -749,7 +754,7 @@ mkdir(savePath);
 if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','zLoc_IndexCorrected','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
-        'lobeDist','ampRatio','sigmaRatio','wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ', 'nmPerPixel','whiteLightFile');
+        'lobeDist','ampRatio','sigmaRatio','wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ', 'nmPerPixel','whiteLightFile','whiteLight','xWL','yWL');
     if exist('xLocRaw');
         save([savePath 'Output'],'xLocRaw','yLocRaw','zLocRaw','zLoc_IndexCorrectedRaw','-append');
     end
