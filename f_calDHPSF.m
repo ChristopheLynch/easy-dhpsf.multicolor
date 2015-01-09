@@ -510,7 +510,8 @@ fps = numFrames/elapsedTime
 beadsPerSec = numFrames*numBeads/elapsedTime
 
 for b = 1:numBeads
-    absLocs(b,1:2) = mean(squeeze(PSFfits(1,PSFfits(1,:,2)==b,14:15)),1) + [ROI(1)-1,ROI(2)-1] * nmPerPixel; 
+%     absLocs(b,1:2) = mean(squeeze(PSFfits(1,PSFfits(1,:,2)==b,14:15)),1) + [ROI(1)-1,ROI(2)-1] * nmPerPixel; 
+    absLocs(b,1:2) = [ROI(1)-1,ROI(2)-1] * nmPerPixel; % gets messed up badly if includes bad fits
 end
 
 % save fit info to MATLAB mat file
@@ -657,7 +658,7 @@ for n = 1:numFiles
     % test to make sure angle vs z curve is monotonic -- remove any
     % outlying points
 %     slope = sign(meanAngles(n,bead,length(meanAngles(n,bead,:)))-meanAngles(n,bead,1));
-    slope = sign(meanAngles(n,bead,round(numSteps*1/4)+1)-meanAngles(n,bead,round(numSteps*1/4)-1));
+    slope = sign(meanAngles(n,bead,round(numSteps*1/4)+3)-meanAngles(n,bead,round(numSteps*1/4)-3));
     
     goodFit = squeeze(squeeze(~isnan(meanAngles(n,bead,:))))';
     
@@ -674,12 +675,12 @@ for n = 1:numFiles
     % then replicate it as if it were moving forward
     % Try to use forward frames unless only a few are fit, or many more
     % backward are fit.
-    if sum(goodFit_forward) < sum(goodFit_backward)-10 || (sum(goodFit_forward) < 5 && sum(goodFit_backward) >= 5)
-        gfTemp = goodFit_forward;
-        goodFit_forward = goodFit_backward;
-        goodFit_backward = gfTemp;
-        clear gfTemp
-    end
+%     if sum(goodFit_forward) < sum(goodFit_backward)-10 || (sum(goodFit_forward) < 5 && sum(goodFit_backward) >= 5)
+%         gfTemp = goodFit_forward;
+%         goodFit_forward = goodFit_backward;
+%         goodFit_backward = gfTemp;
+%         clear gfTemp
+%     end
 
 %     goodFit = logical([0 ones(1,13) zeros(1,11)]) & ...
 %         squeeze(squeeze(~isnan(meanAngles(n,bead,:))))' & ...
