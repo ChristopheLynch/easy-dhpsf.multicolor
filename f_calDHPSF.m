@@ -470,7 +470,10 @@ for a=1:size(sifLogData,1)-2
 %                PSFfits(n,rowIdx,12)*conversionFactor/PSFfits(n,rowIdx,17) < 0
 %                 PSFfits(n,rowIdx,13) = -1007;
 %             end
-
+            % does the fit jump a large amount (>400 nm) from previous fit?
+            if norm(squeeze(PSFfits(n,rowIdx,14:15))'-moleLocs(b,:)*nmPerPixel) > 400;
+                PSFfits(n,rowIdx,13) = -1008;
+            end
         end
         
         % if fit was successful, use the computed center location as center
@@ -510,8 +513,7 @@ fps = numFrames/elapsedTime
 beadsPerSec = numFrames*numBeads/elapsedTime
 
 for b = 1:numBeads
-%     absLocs(b,1:2) = mean(squeeze(PSFfits(1,PSFfits(1,:,2)==b,14:15)),1) + [ROI(1)-1,ROI(2)-1] * nmPerPixel; 
-    absLocs(b,1:2) = [ROI(1)-1,ROI(2)-1] * nmPerPixel; % gets messed up badly if includes bad fits
+    absLocs(b,1:2) = mean(squeeze(PSFfits(1,PSFfits(1,:,2)==b,14:15)),1) + [ROI(1)-1,ROI(2)-1] * nmPerPixel; 
 end
 
 % save fit info to MATLAB mat file
@@ -943,6 +945,3 @@ for bead = 1:numBeads
 
 end
 end
-
-
-
