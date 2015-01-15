@@ -134,7 +134,7 @@ for zSlice = centerZ-zStep:zStep:centerZ+zStep
     % Channel 1.  (They may not be at the same z in channel 1).
     % Assemble the subset of control points for this slice
     [ matched_cpLocs_reflected_temp, matched_cpLocs_transmitted_temp, matchedCP ] = nearestFitCP(...
-        cpLocs_reflected, cpLocs_transmitted, cpSteps, tform );
+        cpLocs_reflected, cpLocs_transmitted, cpSteps, tform,matchLimit );
 
     % This function is evaluated to tell the user how well the 
     % control points can be registered within each z-Slice.
@@ -183,7 +183,7 @@ save([outputFilePrefix 'Identify_ControlPoints_3D_output.mat']);
 end
 
 %% ---------------------------------------------------------------------------------------------
-function [ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasurement,frameAvgStart] = findCPCandidates(...
+function [ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasurement,frameAvgStart,matchLimit] = findCPCandidates(...
     logPath, logFile, totalPSFfits_reflected, totalPSFfits_transmitted )
 % This function isolates frames/localizations when there was no xyz motion,
 % based on the .sif log. Only filters based on frames.
@@ -194,15 +194,17 @@ function [ PSFfits_reflected, PSFfits_transmitted, validFrames, maxNumMeasuremen
 dlg_title = 'Please Input Parameters';
 prompt = {  'How many stationary frames for each position?',...
             'What frame do you want to start the averaging?'...
+            'How closely should the initial transform match points (nm)?'...
         };
 def = {    '20', ... 
            '6'...
+           '60'...
         };
 num_lines = 1;
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 maxNumMeasurement = str2double(inputdialog{1});
 frameAvgStart = str2double(inputdialog{2});
-
+matchLimit = str2double(inputdialog{3});
 %% Analize sif log file
 sifLogData =  importdata([logPath logFile]);
 motionFrames = find(sifLogData(:,1)==-1);   % This finds -1 entries in the shutters correspoding to moving frames
@@ -803,7 +805,7 @@ end
 
 %% ---------------------------------------------------------------------------------------------
 function [ matched_cpLocs_reflected, matched_cpLocs_transmitted, matchedCP ] = nearestFitCP(...
-    cpLocs_reflected, cpLocs_transmitted, cpSteps, tform )
+    cpLocs_reflected, cpLocs_transmitted, cpSteps, tform, matchLimit)
 % This function identifies the remaining control point pairs based on the
 % structure tform (2D transformation)
 % If the target localization is within 60 nm of the transformed
@@ -837,7 +839,7 @@ for i = 1:length(cpSteps)
         totalDifference = sqrt((residual1).^2 + (residual2).^2);
         [value,matchedCoord] = min(totalDifference);
         
-        if value <= 60   % in units of nm, this parameter might need to be made adjustable.
+        if value <= matchLimit   % in units of nm, this parameter might need to be made adjustable.
             matchedCP = matchedCP + 1;
             if isnan(cpLocs_reflected(cpLocs_reflected(:,1)==cpSteps(i) & ...
                     cpLocs_reflected(:,5)==tempX(matchedCoord),13))
