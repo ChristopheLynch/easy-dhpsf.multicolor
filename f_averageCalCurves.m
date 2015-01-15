@@ -37,7 +37,7 @@ close all
 
 % output 1 x #holes x #steps: not elegant, but this way, can change to an
 % arbitrary holes / set of templates without changing the downstream code.
-zSamples = -1000:25:1000;	% nm
+zSamples = -1250:25:1250;	% nm
 
 %% ask user for relevant datafiles
 

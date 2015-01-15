@@ -25,7 +25,7 @@
 % NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-function [outputFilePrefix] = ...
+function [outputFilePrefix,logFile,logPath] = ...
     f_fitSMs(dataFile,dataPath,calFile,calBeadIdx,templateFrames,peakThreshold,...
     darkFile,logFile,logPath,boxRadius,channel, sigmaBounds,gaussianFilterSigma,minDistBetweenSMs,...
     lobeDistBounds,conversionGain,nmPerPixel,EMGain,templateLocs,threshFile,ROI,nhaData)
@@ -43,7 +43,6 @@ if exist('threshFile')
 end
 if nhaData
     peakThreshold=peakThreshold*10000; %cancels out the call to divide in easy_dhpsf
-    load(threshFile,'blankMask'); %retrieve mask for censoring data
 end
 
 printOutputFrames = 0;
@@ -103,8 +102,8 @@ prompt = {};
 % fields for the frame selection dlg
 fileInfoAll=cell(length(selectedFiles),1);
 numFramesAll = zeros(length(selectedFiles),1);
-def = cell(length(selectedFiles)+1,1);
-prompt = cell(length(selectedFiles)+1,1);
+def = cell(length(selectedFiles)+2,1);
+prompt = cell(length(selectedFiles)+2,1);
 
 for i = 1:length(selectedFiles)
     fileInfoAll{i} = imfinfo([dataPath dataFile{selectedFiles(i)}]);
@@ -112,16 +111,22 @@ for i = 1:length(selectedFiles)
     def{i} = ['[1:' num2str(numFramesAll(i)) ']'];
     prompt{i} = ['Choose frames for ' dataFile{selectedFiles(i)}];
 end
+    def{end-1} = 'No';
+    prompt{end-1} = 'Do you want to estimate the laser profile?';
     def{end} = 'No';
-    prompt{end} = 'Do you want to estimate the laser profile?';
-
+    prompt{end} = 'Do you want to try to find true lobe sigmas?';
 inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
 %%%%%%%%%%%%%%%** this must be uncommented if selecting frames **
 for i = 1:length(selectedFiles)
     framesAll{i} = str2num(inputdialog{i});
 end
-findLaserInt = ~strcmp(inputdialog{end},'No');
+findLaserInt = ~strcmp(inputdialog{end-1},'No');
+findTrueSigma = ~strcmp(inputdialog{end},'No');
 
+if findTrueSigma % this uses constrained sigmas for the fit of location, etc., and then separately finds the sigmas
+    sigSearchBounds = [0.9 4];
+    sigOptions = optimset('FunValCheck','on','Diagnostics','off','Jacobian','off', 'Display', 'off');
+end
 % This information should be passed from the earlier execution of
 % this code in f_calSMidentification, but we get another chance to
 % select it if it wasn't specified
@@ -376,8 +381,8 @@ for stack = selectedFiles % = 1:length(dataFile)
         currIdx = find(frames==c); % current index within 'frames'
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);        % crop data to ROI
-        if nhaData
-            data=data.*(~blankMask);
+        if nhaData 
+            data=data.*(FOVmask1);
         end
         if usePolyROI
             dataRing=data(FOVmask&~FOVmask1);
@@ -445,7 +450,9 @@ for stack = selectedFiles % = 1:length(dataFile)
             %H = H / sqrt(sum(abs(H(:)).^2));
             
             peakImg = ifftshift(ifft2(dataFT.*squeeze(templateFT(b,:,:)).*H));
-            
+            if exist('FOVmask') % prevents finding matches outside FOV (due to e.g. wrapping around)
+                peakImg=peakImg.*FOVmask;
+            end
             % normalize response of peakImg by dividing by number of pixels in
             % data
             %peakImg = peakImg / (cropHeight*cropWidth);
@@ -573,6 +580,16 @@ for stack = selectedFiles % = 1:length(dataFile)
                 f_doubleGaussianVector(x,data(yIdx(:,1),xIdx(1,:)),0,xIdx,yIdx),...
                 fitParam,lowerBound,upperBound,options);
             
+            if findTrueSigma
+                lowerBoundSig = [sigSearchBounds(1) sigSearchBounds(1)];
+                upperBoundSig = [sigSearchBounds(2) sigSearchBounds(2)];
+                [fitParamSigma,~,~,~] = lsqnonlin(@(x) ...
+                f_doubleGaussianVector([fitParam(1:6) x],data(yIdx(:,1),xIdx(1,:)),0,xIdx,yIdx),...
+                fitParam(7:8),lowerBoundSig,upperBoundSig,sigOptions);
+                fitParam(7:8) = fitParamSigma;
+            end
+           
+            
             fittedBkgndMean = mean2(bkgndImg(yIdx(:,1),xIdx(1,:)))*conversionFactor;
             
             PSFfits(b,1:11) = [fitParam fittedBkgndMean sum(abs(residual)) exitflag];
@@ -653,8 +670,13 @@ for stack = selectedFiles % = 1:length(dataFile)
                     PSFfits(b,11) = -1002;
                 end
                 % absolute sigma size for either lobe within bounds?
-                if fitParam(7)<=sigmaBounds(1) || fitParam(8)<=sigmaBounds(1) ...
-                        || fitParam(7)>=sigmaBounds(2) || fitParam(8)>=sigmaBounds(2)
+                if findTrueSigma && (...
+                        fitParam(7)-0.001<=sigSearchBounds(1) || fitParam(8)-0.001<=sigSearchBounds(1) ...
+                        || fitParam(7)+0.001>=sigSearchBounds(2) || fitParam(8)+0.001>=sigSearchBounds(2) )
+                    PSFfits(b,11) = -1003;
+                elseif ~findTrueSigma && (...
+                        fitParam(7)<=sigmaBounds(1) || fitParam(8)<=sigmaBounds(1) ...
+                        || fitParam(7)>=sigmaBounds(2) || fitParam(8)>=sigmaBounds(2) )
                     PSFfits(b,11) = -1003;
                 end
                 % sigma ratio of lobes less than limit?

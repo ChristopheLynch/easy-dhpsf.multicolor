@@ -26,11 +26,26 @@
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 function [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = ...
-    f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix,logFile,logPath,channel)
+    f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix,logFile,logPath,channel,calFile,currFidIdx)
 %clear all;
 % close all;
 numSyncFrames = 25;
 useDenoising = 1;
+
+%Construct a questdlg with three options
+                dlg_title = 'Use local cals?';
+                prompt = { 'Do you want to try to use spatially dependent calibrations?' };
+                def =       { 'No'  };
+                questiondialog = questdlg(prompt,dlg_title, def);
+                % Handle response
+                switch questiondialog
+                    case 'Yes'
+                        spatialCorr=true;
+                    case 'No'
+                        spatialCorr=false;
+                    case 'Cancel'
+                        error('User cancelled the program');
+                end
 
 % Can use sif logs to filter which frames are included for fiducial correction.
 % If logPath set to 0, all frames are used (every frame with a visible fiducial,
@@ -41,8 +56,9 @@ useDenoising = 1;
 % unless we can find a good way for waveletFidTracks to 'estimate' what's
 % going on in large gaps
 
-logFile=0; logPath=0; channel=[];
+logFile=0; logPath=0; %channel=[];
 
+%% prepare fiducial data / blank out fiducial arrays
 if useFidCorrections
     %% load raw fiduciary data
     % [fidFile fidPath] = uigetfile({'*.mat';'*.*'},'Open data file #1 with raw fiduciary fits');
@@ -67,6 +83,20 @@ if useFidCorrections
     PSFfits = tempPSFfits;
     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
+    
+    %% allow user to use a different spectrum for fid, or use spatially dependent calibration if selected above
+    [fidSaveFile, fidSavePath] = uigetfile({'*.mat';'*.*'},...
+        'If drift fiducial has different spectrum, open its easy-dhpsf save now (optional: hit cancel to skip)',...
+        'MultiSelect', 'off');
+    if ~isequal(fidSaveFile,0)
+        load([fidSavePath,fidSaveFile],channel);
+        fidCalFile = [eval([channel '.calFilePrefix']) 'calibration.mat'];
+        clear(channel);
+        PSFfits = makeLocalCals(PSFfits,fidCalFile,'FID');
+    elseif spatialCorr
+        PSFfits = makeLocalCals(PSFfits,calFile,'FID');
+    end
+    
     
     fidTrackX = NaN(size(PSFfits,1),numMoles);
     fidTrackY = NaN(size(PSFfits,1),numMoles);
@@ -111,6 +141,7 @@ else
     fidTrackZ = NaN;
 end
 
+%% concatenate data with fid corrections / just concatenate data
 if useFidCorrections
     %% compute movement of fiduciaries
     devX = zeros(numFrames,numMoles);
@@ -162,13 +193,16 @@ if useFidCorrections
         
         % compute deviation with respect to bead location averaged over last
         % numSyncFrames frames of the movie
-        devX(:,molecule) = moleculeFitParam(:,21) ...
-            - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),21));
-        devY(:,molecule) = moleculeFitParam(:,22) ...
-            - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),22));
-        devZ(:,molecule) = moleculeFitParam(:,23) ...
-            - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),23));
-        numPhotons(:,molecule) = moleculeFitParam(:,17);
+        devX(:,molecule) = moleculeFitParam(:,21) -nanmean(moleculeFitParam(goodFit,21));
+        devY(:,molecule) = moleculeFitParam(:,22) -nanmean(moleculeFitParam(goodFit,22));
+        devZ(:,molecule) = moleculeFitParam(:,23) -nanmean(moleculeFitParam(goodFit,23));
+%         devX(:,molecule) = moleculeFitParam(:,21) ...
+%             - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),21));
+%         devY(:,molecule) = moleculeFitParam(:,22) ...
+%             - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),22));
+%         devZ(:,molecule) = moleculeFitParam(:,23) ...
+%             - mean(moleculeFitParam(any(bsxfun(@eq,moleculeFitParam(:,1), syncFrames),2),23));
+%         numPhotons(:,molecule) = moleculeFitParam(:,17);
         
         % write fiduciary data to Excel spreadsheet
         %         xlswrite([saveFilePrefix 'fiduciary deviations.xlsx'], ...
@@ -208,7 +242,7 @@ if exist('tempAvgDevX','var')
     
     for c = 1:fileNum
         % load data
-        load([fitFilePrefix{c} 'molecule fits.mat'],'totalPSFfits','numFrames');
+        load([fitFilePrefix{c} 'molecule fits.mat'],'totalPSFfits','numFrames','calBeadIdx');
         
         if c == 1
             tempPSFfits = totalPSFfits(:,1:27);
@@ -218,10 +252,36 @@ if exist('tempAvgDevX','var')
         end
     end
     totalPSFfits = tempPSFfits;
+    
+    %% possibly switch calibration fiducial for fits
+    if currFidIdx~=calBeadIdx && ~spatialCorr
+    dlg_title = 'Use currently selected fiducuial?';
+                prompt = { 'Do you want to switch the fiducial to the currently selected one?' };
+                def =       { 'No'  };
+                questiondialog = questdlg(prompt,dlg_title, def);
+                % Handle response
+                switch questiondialog
+                    case 'Yes'
+                        useCurrent=true;
+                    case 'No'
+                        useCurrent=false;
+                    case 'Cancel'
+                        error('User cancelled the program');
+                end
+    else
+        useCurrent = false;
+    end
+    
+    if spatialCorr
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',0);
+    elseif useCurrent
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',currFidIdx);
+    end
+    
     %     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
     
-    % De-noise the fiduciary tracks
+    %% De-noise the fiduciary tracks
     avgDevX = tempAvgDevX;
     avgDevY = tempAvgDevY;
     avgDevZ = tempAvgDevZ;
@@ -262,7 +322,7 @@ else
     for fileNum=1:length(fitFilePrefix)
         %         moleFiles = [moleFiles; {[molePath moleFile]}];
         clear numFrames;
-        load([fitFilePrefix{fileNum} 'molecule fits.mat'],'totalPSFfits','numFrames');
+        load([fitFilePrefix{fileNum} 'molecule fits.mat'],'totalPSFfits','numFrames','calBeadIdx');
         
         if fileNum == 1
             tempPSFfits = totalPSFfits(:,1:27);
@@ -287,6 +347,41 @@ else
     numFrames = numFramesInFiles;
     % includes NaNs for fiducial-corrected position fields
     totalPSFfits = [tempPSFfits nan(size(tempPSFfits,1),3)];
+    
+    %% possibly switch calibration fiducial for fits
+    if currFidIdx~=calBeadIdx && ~spatialCorr
+    dlg_title = 'Use currently selected fiducuial?';
+                prompt = { 'Do you want to switch the calibration fiducial to the currently selected one?' };
+                def =       { 'No'  };
+                questiondialog = questdlg(prompt,dlg_title, def);
+                % Handle response
+                switch questiondialog
+                    case 'Yes'
+                        useCurrent=true;
+                    case 'No'
+                        useCurrent=false;
+                    case 'Cancel'
+                        error('User cancelled the program');
+                end
+    else
+        useCurrent = false;
+    end
+    
+    
+    
+    if spatialCorr
+%         [altCalFile, altCalPath] = uigetfile({'*.mat';'*.*'},...
+%         'If you want to apply another calibration, click on the "calibration.mat" now (optional: hit cancel to skip)',...
+%         'MultiSelect', 'off');
+%         if ~isequal(altCalFile,0)
+%             calFile = [altCalPath altCalFile];
+%         end
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',0);
+    elseif useCurrent
+        totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',currFidIdx);
+        disp('Note that "use current calibration" functionality has not been implemented yet for fiducials');
+    end
+    
     %     numFrames = sum(numFramesInFiles);
     clear tempPSFfits;
     
@@ -307,4 +402,62 @@ else
     %         'concatenation info');
     
 end
+
+end % end main function
+
+function [PSFfits] = makeLocalCals(PSFfits,calFile,type,calBeadIdx)
+    load(calFile,'absLocs','goodFit_f','meanAngles','meanX','meanY','z');
+    numCals = size(absLocs,1);
+    
+    if strcmp(type,'SMACM')
+        xCol = 18;
+        yCol = 19;
+        angCol = 20;
+        xOut = 25;
+        yOut = 26;
+        zOut = 27;
+        goodFitCol = 13;
+    elseif strcmp(type,'FID')
+        xCol = 14;
+        yCol = 15;
+        angCol = 16;
+        xOut = 21;
+        yOut = 22;
+        zOut = 23;
+        goodFitCol = 13;
+    end
+    % length(PSFfits) x numCals... is this too big?
+    calDists = sqrt(...
+                   (repmat(PSFfits(:,xCol),1,numCals)-repmat(absLocs(:,1)',length(PSFfits),1)).^2 +...
+                   (repmat(PSFfits(:,yCol),1,numCals)-repmat(absLocs(:,2)',length(PSFfits),1)).^2);
+    for i = 1:numCals 
+        if sum(goodFit_f(1,i,:)) < 10 && sum(goodFit_b(1,i,:)) < 10
+            calDists(i) = nan;
+            disp(['fiducial # ' num2str(i) ' did not have enough good fits!']);
+        end
+    end
+    [~,calNN] = min(calDists,[],2);
+    
+        
+    goodFits = PSFfits(:,goodFitCol)>0;
+    
+    if exist('calBeadIdx') && calBeadIdx ~= 0
+        calNN(:)=calBeadIdx;
+    end
+    %goodFit_forward = logical(squeeze(goodFit_f(1,calBeadIdx,:)));
+    
+    % for fids: this easily tests whether fid drifts between cals
+    % figure; hist(calNN(goodFits,:),1:numCals)
+    
+    for i = 1:numCals % loop over each cal and redo points near that cal
+        goodFit_forward = logical(squeeze(goodFit_f(1,i,:)));
+        PSFfits(calNN==i,xOut) = PSFfits(calNN==i,xCol) ...
+            - interp1(squeeze(meanAngles(1,i,goodFit_forward)),...
+            squeeze(meanX(1,i,goodFit_forward)),PSFfits(calNN==i,angCol),'spline');
+        PSFfits(calNN==i,yOut) = PSFfits(calNN==i,yCol) ...
+            - interp1(squeeze(meanAngles(1,i,goodFit_forward)),...
+            squeeze(meanY(1,i,goodFit_forward)),PSFfits(calNN==i,angCol),'spline');
+        PSFfits(calNN==i,zOut) = interp1(squeeze(meanAngles(1,i,goodFit_forward)),...
+            squeeze(z(1,i,goodFit_forward)),PSFfits(calNN==i,angCol),'spline');
+    end
 end
