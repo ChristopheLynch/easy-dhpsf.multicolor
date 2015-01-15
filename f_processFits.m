@@ -32,12 +32,15 @@
 % directly
 function f_processFits(catPSFfits,numFrames,fitFilePrefix, fidTrackX, fidTrackY, fidTrackZ, nmPerPixel)
 useTimeColors = 0;
+plotAsTracks = 0;
 numPhotonRange = [300 10000];
-xyPrecRange = [0 100];
-zPrecRange = [0 150];
+xyPrecRange = [0 150];
+zPrecRange = [0 200];
+
 numFramesAll = sum(numFrames);
 load([fitFilePrefix{1} 'molecule fits.mat']);
 
+threshVals = peakThreshold(1,:);
 
 % Parameters
 
@@ -92,7 +95,7 @@ scrsz = get(0,'ScreenSize');
 %     error('User cancelled the program');
 % end
 [whiteLightFile, whiteLightPath] = uigetfile({'*.tif';'*.*'},'Open image stack with white light image');
-
+whiteLightFile = [whiteLightPath whiteLightFile];
 % load([locPath locFile]);
 
 
@@ -149,6 +152,8 @@ while anotherpass == true
         lobeDistCol = 22;
         ampRatioCol = 23;
         sigmaRatioCol = 24;
+        templateNumCol = 5;
+        templateStrCol = 6;
         
         initGoodFits = catPSFfits(:,goodFitFlagCol) > 0;
         
@@ -215,6 +220,7 @@ while anotherpass == true
         'Z range upper bound(in nm)',...
         'First frame',...
         'Last frame'...
+        'Plot as Tracks'...
         };
     def = { ...
         num2str(scatterSize), ...
@@ -225,6 +231,7 @@ while anotherpass == true
         num2str(zRange(2)), ...
         num2str(frameRange(1)), ...
         num2str(frameRange(2)), ...
+        num2str(plotAsTracks), ...
         };
     num_lines = 1;
     inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
@@ -235,6 +242,7 @@ while anotherpass == true
     wlShiftY = str2double(inputdialog{4});
     zRange = [str2double(inputdialog{5}) str2double(inputdialog{6})];
     frameRange = [str2double(inputdialog{7}) str2double(inputdialog{8})];
+    plotAsTracks = str2double(inputdialog{9});
       
     dlg_title = 'Please Input Parameters';
     prompt = {  ...
@@ -252,6 +260,7 @@ while anotherpass == true
         'xyPrec upper bound (nm)',...
         'zPrec lower bound (nm)',...
         'zPrec upper bound (nm)',...
+        'Minimum template match values',...
         };
     def = { ...
 %         num2str(sigmaBounds(1)), ...
@@ -268,6 +277,7 @@ while anotherpass == true
         num2str(xyPrecRange(2)),...
         num2str(zPrecRange(1)),...
         num2str(zPrecRange(2)),...
+        ['[' num2str(threshVals) ']'],...
         };
     num_lines = 1;
     inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
@@ -280,20 +290,25 @@ while anotherpass == true
     numPhotonRange = [str2double(inputdialog{7}) str2double(inputdialog{8})];
     xyPrecRange = [str2double(inputdialog{9}) str2double(inputdialog{10})];
     zPrecRange = [str2double(inputdialog{11}) str2double(inputdialog{12})];
-    
+    threshVals = str2num(inputdialog{13});
     %% Plot the white light image if specified
     if whiteLightFile ~= 0
-        whiteLightInfo = imfinfo([whiteLightPath whiteLightFile]);
+        whiteLightInfo = imfinfo(whiteLightFile);
         whiteLight = zeros(whiteLightInfo(1).Height, whiteLightInfo(1).Width);
         % average white light images together to get better SNR
         for a = 1:length(whiteLightInfo)
-            whiteLight = whiteLight + double(imread([whiteLightPath whiteLightFile], ...
+            whiteLight = whiteLight + double(imread(whiteLightFile, ...
                 'Info', whiteLightInfo));
         end
         % resize white light to the size of the ROI of the single molecule fits
         whiteLight = whiteLight(ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1,ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1);
         % rescale white light image to vary from 0 to 1
-        whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
+        %         whiteLight = (whiteLight-min(whiteLight(:)))/(max(whiteLight(:))-min(whiteLight(:)));
+        border = 40;
+        whiteLight = (whiteLight-min(whiteLight(:)))/...
+            (max(max(whiteLight(border:size(whiteLight,1)-border,...
+            border:size(whiteLight,2)-border)))-...
+            min(whiteLight(:)));
         [xWL, yWL] = meshgrid((ROI_initial(1):ROI_initial(1)+ROI_initial(3)-1) * nmPerPixel + wlShiftX, ...
             (ROI_initial(2):ROI_initial(2)+ROI_initial(4)-1) * nmPerPixel + wlShiftY);
         %         [xWL yWL] = meshgrid((1:(whiteLightInfo(1).Width)) * nmPerPixel + wlShiftX, ...
@@ -348,27 +363,37 @@ while anotherpass == true
             
             continue
             
+        %gaussian sigma ratio filter
         elseif catPSFfits(i,sigmaRatioCol) > sigmaRatioLimit;
             
             catPSFfits(i,goodFitFlagCol) = -1004;
-            
+        
+        % lobe distance filter
         elseif catPSFfits(i,lobeDistCol) < lobeDistBounds(1) || catPSFfits(i,lobeDistCol) > lobeDistBounds(2)
             
             catPSFfits(i,goodFitFlagCol) = -1005;
-            
+       
+        % amplitude ratio filter
         elseif catPSFfits(i,ampRatioCol) > ampRatioLimit;
             
             catPSFfits(i,goodFitFlagCol) = -1006;
-            
+        
+        % weighted error filter
         elseif catPSFfits(i,fitErrorCol)*conversionFactor/catPSFfits(i,numPhotonCol) > fitErrorRange(2)  || ...
                 catPSFfits(i,fitErrorCol)*conversionFactor/catPSFfits(i,numPhotonCol) < fitErrorRange(1)
             
             catPSFfits(i,goodFitFlagCol) = -1007;
-            
+        
+        % localization precision filter     
         elseif sigmaX < xyPrecRange(1) || sigmaX > xyPrecRange(2) ||...
                sigmaZ < zPrecRange(1) || sigmaZ > zPrecRange(2)
             
             catPSFfits(i,goodFitFlagCol) = -1008;
+        
+        % template match strength filter
+        elseif catPSFfits(i,templateStrCol) < threshVals(catPSFfits(i,templateNumCol))
+            catPSFfits(i,goodFitFlagCol) = -1009;
+            
         else
             catPSFfits(i,goodFitFlagCol) = 3;
         end
@@ -436,6 +461,10 @@ while anotherpass == true
     end
     
     numPhotons = catPSFfits(goodFits,21);
+    lobeDist = catPSFfits(goodFits,22);
+    ampRatio = catPSFfits(goodFits,23);
+    sigmaRatio = catPSFfits(goodFits,24);
+    
 %     meanBkgnd = totalPSFfits(goodFits,15)*conversionFactor;
     meanBkgnd = catPSFfits(goodFits,15);  % output from template match is already in units of photons.
     frameNum = catPSFfits(goodFits,1);
@@ -448,7 +477,7 @@ while anotherpass == true
         xRange = xWL(1,:);
         yRange = yWL(:,1);
         % pick region that contains background
-        imagesc(xRange,yRange,whiteLight);axis image;colormap gray;hold on;
+        imagesc(xRange,yRange,whiteLight, [0 1]);axis image;colormap gray;hold on;
     end
     
     % plot is faster than scatter
@@ -480,6 +509,11 @@ while anotherpass == true
     validPoints = xLoc>=ROI(1) & xLoc<=ROI(1)+ROI(3) & yLoc>ROI(2) & yLoc<=ROI(2)+ROI(4) & numPhotons>0;
     invalidPoints = xLoc_bad>=ROI(1) & xLoc_bad<=ROI(1)+ROI(3) & yLoc_bad>ROI(2) & yLoc_bad<=ROI(2)+ROI(4) ;
     
+    if ~any(validPoints)
+        disp('You chose an area without any points');
+        continue
+    end
+    
     xLocPix = xLocPix(validPoints);
     yLocPix = yLocPix(validPoints); 
     xLoc = xLoc(validPoints);
@@ -500,6 +534,10 @@ while anotherpass == true
     numPhotons = numPhotons(validPoints);
     meanBkgnd = meanBkgnd(validPoints);
     frameNum = frameNum(validPoints);
+    lobeDist = lobeDist(validPoints);
+    ampRatio = ampRatio(validPoints);
+    sigmaRatio = sigmaRatio(validPoints);
+    
     PSFfits_bad = PSFfits_bad(invalidPoints,:);
     hRejections = figure;
     subplot(2,2,1:2)
@@ -605,12 +643,26 @@ while anotherpass == true
         colormap gray; hold on;
     end
     
-    if useTimeColors == 0
+    if plotAsTracks == 1
+        markerColors = jet(frameNum(length(frameNum))-frameNum(1)+1);
+        
+        for a = 1:length(frameNum)-1
+        
+%             plot3(xLoc,yLoc,zLoc_IndexCorrected,'-',...
+%                 'Color',[1 1 0]);
+            plot3(xLoc(a:a+1),yLoc(a:a+1),zLoc_IndexCorrected(a:a+1),'LineWidth',scatterSize/12,...
+                'Color',markerColors(frameNum(a)-frameNum(1)+1,:));
+            
+%             scatter3(xLoc(a),yLoc(a),zLoc_IndexCorrected(a),scatterSize,'filled',...
+%                 'MarkerFaceColor', markerColors(frameNum(a)-frameNum(1)+1,:),...
+%                 'MarkerEdgeColor', markerColors(frameNum(a)-frameNum(1)+1,:));
+        end
+    elseif useTimeColors == 0
         % plot is faster than scatter
         plot3(xLoc,yLoc,zLoc_IndexCorrected,'.','MarkerSize',scatterSize/3,...
             'Color',[1 1 0]);
     %     scatter3(xLoc,yLoc,zLoc,scatterSize,[1 1 0],'filled');
-    else
+    elseif useTimeColors == 1
         %         scatter3(xLoc(a),yLoc(a),zLoc(a),scatterSize,frameNum(1):frameNum(length(frameNum)),'filled')
         markerColors = jet(frameNum(length(frameNum))-frameNum(1)+1);
         %     for a = 1:length(frameNum)
@@ -702,9 +754,12 @@ mkdir(savePath);
 if ~isequal(saveFile,0)
     save([savePath 'Output'],'xLocPix','yLocPix','xLoc','yLoc','zLoc','zLoc_IndexCorrected','numPhotons','meanBkgnd','sigmaX','sigmaY','sigmaZ','frameNum',...
         'zRange','frameRange','sigmaBounds','lobeDistBounds','ampRatioLimit','sigmaRatioLimit','fitErrorRange','numPhotonRange',...
-        'wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ', 'nmPerPixel');
+        'lobeDist','ampRatio','sigmaRatio','wlShiftX', 'wlShiftY','goodFits','fidTrackX', 'fidTrackY', 'fidTrackZ', 'nmPerPixel','whiteLightFile');
     if exist('xLocRaw');
         save([savePath 'Output'],'xLocRaw','yLocRaw','zLocRaw','zLoc_IndexCorrectedRaw','-append');
+    end
+    if exist('whiteLight');
+        save([savePath 'Output'],'whiteLight','xWL','yWL','-append');
     end
 end
 %%

@@ -34,6 +34,17 @@ function [outputFilePrefix] = f_trackFiducials(dataFile,dataPath,calFile,calBead
 
 % sigmaBounds = [1.0 3.0] * 125.78 / nmPerPixel;
 
+dlg_title = 'background subtraction type';
+prompt = { 'Use wavelet subtraction?' }; 
+def = { '0' };
+num_lines = 1;
+inputdialog = inputdlg(prompt,dlg_title,num_lines,def);
+
+% whether to use wavelet background subtraction, or subtract mean of image
+% Off by default to minimize any possible change to shape of
+% templates.
+useWaveSub = logical(str2num(inputdialog{1}));
+
 conversionFactor = conversionGain/EMGain;
 % lobeDistBounds(2) = 10;
 
@@ -63,7 +74,7 @@ for stack = 1:length(dataFile)
     
     if stack == 1
         
-        load(calFile) % is this needed at this point??
+        %load(calFile) % is this needed at this point?
         
         if strcmp(templateFile(length(templateFile)-2:length(templateFile)),'tif')
             
@@ -280,6 +291,18 @@ for stack = 1:length(dataFile)
 
     %% Identify frames to analyze based on the sequence log
     % load data and register sequence log to data frames
+    if isequal(logFile,0)
+        [logFile, logPath] = uigetfile({'*.dat';'*.*'},...
+            'Open sequence log file(s) corresponding to image stack(s) (optional: hit cancel to skip)',...
+            'MultiSelect', 'on');
+        if isequal(logPath,0)
+            logFile = 'not specified';
+        end
+        if ischar(logFile)
+            logFile = cellstr(logFile);
+        end
+    end
+    
     if ~isequal(logPath,0)
         if length(logFile) == length(dataFile) % if one sif file/data file
             sifLogData =  importdata([logPath logFile{stack}]);
@@ -297,6 +320,9 @@ for stack = 1:length(dataFile)
         %         end
         frames_green = intersect(find(sifLogData(:,2) == 1),frames);
         frames_red = intersect(find(sifLogData(:,3) == 1),frames);
+        if size(frames_green,2)==1 || size(frames_red,2)==1
+            frames_green=frames_green';frames_red=frames_red';
+        end
         selectedFrames = unique(sort([frames_green, frames_red]));
     else
         selectedFrames=frames; % **temp** workaround from rev 43!
@@ -318,7 +344,14 @@ for stack = 1:length(dataFile)
         data = data(ROI(2):ROI(2)+ROI(4)-1, ...
             ROI(1):ROI(1)+ROI(3)-1);        % crop image to ROI
         
-        bkgndImg = f_waveletBackground(data);
+        % subtract the background and continue
+        if useWaveSub || ~exist('useWaveSub')
+            bkgndImg = f_waveletBackground(data);
+        else
+        % subtract median to get rough idea of #photons of fiducial
+            bkgndImg = repmat(median(data(:)),size(data));
+        end
+            
         data = data - bkgndImg;
         
         %         %% compute background image for each frame
@@ -694,7 +727,7 @@ for stack = 1:length(dataFile)
                     
                     
                     % find previously good fit
-                    index = find(PSFfits(:,13)>0);
+                    index = find(PSFfits(:,13)>0&PSFfits(:,2)==b);
                     % Alternatively, could average a couple of previous
                     % frames to make distance threshold adjustable on the
                     % fly

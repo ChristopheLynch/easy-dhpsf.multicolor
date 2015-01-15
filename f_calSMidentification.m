@@ -175,25 +175,27 @@ for stack = selectedFiles
         
         
         templateFrames = interp1(squeeze(meanAngles(1,calBeadIdx,goodFit_forward)),...
-            1:length(meanAngles(1,calBeadIdx,goodFit_forward)),-60:30:90,'nearest'); %90:-30:-60
+            1:length(meanAngles(1,calBeadIdx,goodFit_forward)),linspace(-60,80,6),'nearest'); %90:-30:-60
         end
         % if some angles are out of range, use the ends of the template
         % stack. first determine whether frames are increasing or
         % decreasing so the the 'ends' are chosen correctly.
         
+        % use 2nd frame since 1st seems to give wrong angle (at least for
+        % NHAs)
         if any(isnan(templateFrames))
             if nanmean(diff(templateFrames)) >= 0
-                endFrames = {1 sum(goodFit_forward)};
+                endFrames = [2 sum(goodFit_forward)];
             elseif nanmean(diff(templateFrames)) < 0
-                endFrames = {sum(goodFit_forward) 1};
+                endFrames = [sum(goodFit_forward) 2];
             else
                 endFrames = nan;
             end
             if isnan(templateFrames(1))
-                templateFrames(1) = endFrames{1};
+                templateFrames(1) = endFrames(1);
             end
             if isnan(templateFrames(end))
-                templateFrames(end) = endFrames{2};
+                templateFrames(end) = endFrames(2);
             end
         end
 
@@ -558,7 +560,12 @@ for stack = selectedFiles
     end
     lastFrame = nan;
     
+    meanBG = nan(length(frames),1);
+    meanSignal = nan(length(frames),1);
+    
     for c = frames(end:-1:1)
+        
+        currIdx = find(frames==c);
         
         data = double(imread([dataPath dataFile{stack}],c,'Info',fileInfo))-darkAvg;
         data = data(ROI(2):ROI(2)+ROI(4)-1, ROI(1):ROI(1)+ROI(3)-1);
@@ -578,7 +585,7 @@ for stack = selectedFiles
         if medianFilter
             
             % only run on first frame, or frames divisible by interpVal
-            if isnan(lastFrame) || c==interpVal*round(c/interpVal);
+            if isnan(lastFrame) || currIdx==interpVal*round(currIdx/interpVal);
                 [bkgndImgMed, dataWindow] = f_medianFilter([dataPath dataFile{stack}], fileInfo, darkAvg, ROI, frames, c, windowSize, dataWindow,lastFrame);
                 lastFrame = c;
             end
@@ -772,6 +779,10 @@ for stack = selectedFiles
             ['ROI [xmin ymin width height] = ' mat2str(ROI)]});
 
         drawnow;
+        
+        meanSignal(currIdx) = mean(data(FOVmask));
+        meanBG(currIdx) = mean(bkgndImg(FOVmask));
+        
     end
     elapsedTime = toc(startTime);
     totalPSFfits = totalPSFfits(1:numPSFfits,:);
@@ -795,5 +806,5 @@ for stack = selectedFiles
 
     
 end
-
+outputFilePrefix{1} = outputFilePrefix{selectedFiles(1)};
 end
