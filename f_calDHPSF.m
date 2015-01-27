@@ -677,12 +677,12 @@ for n = 1:numFiles
     % then replicate it as if it were moving forward
     % Try to use forward frames unless only a few are fit, or many more
     % backward are fit.
-%     if sum(goodFit_forward) < sum(goodFit_backward)-10 || (sum(goodFit_forward) < 5 && sum(goodFit_backward) >= 5)
-%         gfTemp = goodFit_forward;
-%         goodFit_forward = goodFit_backward;
-%         goodFit_backward = gfTemp;
-%         clear gfTemp
-%     end
+    if sum(goodFit_backward) > sum(goodFit_forward)*2
+        gfTemp = goodFit_forward;
+        goodFit_forward = goodFit_backward;
+        goodFit_backward = gfTemp;
+        clear gfTemp
+    end
 
 %     goodFit = logical([0 ones(1,13) zeros(1,11)]) & ...
 %         squeeze(squeeze(~isnan(meanAngles(n,bead,:))))' & ...
