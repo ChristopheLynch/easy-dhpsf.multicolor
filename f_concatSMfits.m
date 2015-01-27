@@ -25,7 +25,7 @@
 % NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 % SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-function [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ] = ...
+function [totalPSFfits, numFrames, fidTrackX, fidTrackY, fidTrackZ,spatialCorr,useCurrent] = ...
     f_concatSMfits(fitFilePrefix,useFidCorrections,fidFilePrefix,logFile,logPath,channel,calFile,currFidIdx)
 %clear all;
 % close all;
@@ -370,12 +370,12 @@ else
     
     
     if spatialCorr
-%         [altCalFile, altCalPath] = uigetfile({'*.mat';'*.*'},...
-%         'If you want to apply another calibration, click on the "calibration.mat" now (optional: hit cancel to skip)',...
-%         'MultiSelect', 'off');
-%         if ~isequal(altCalFile,0)
-%             calFile = [altCalPath altCalFile];
-%         end
+        [altCalFile, altCalPath] = uigetfile({'*.mat';'*.*'},...
+        'If you want to apply another calibration, click on the "calibration.mat" now (optional: hit cancel to skip)',...
+        'MultiSelect', 'off');
+        if ~isequal(altCalFile,0)
+            calFile = [altCalPath altCalFile];
+        end
         totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',0);
     elseif useCurrent
         totalPSFfits = makeLocalCals(totalPSFfits,calFile,'SMACM',currFidIdx);
